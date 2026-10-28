@@ -35,7 +35,9 @@ import {
   SlidersHorizontal,
   Boxes,
   CircleHelp,
+  ShoppingCart,
 } from "lucide-react";
+import PosPanel from "./pos-panel";
 
 type Row = Record<string, any>;
 type Me = {
@@ -78,11 +80,13 @@ const labels: Row = {
   manager: "Gerente",
   stock: "Estoquista",
   viewer: "Consulta",
+  cashier: "Operador de caixa",
   in_stock: "Em estoque",
   out: "Fora do estoque",
 };
 const nav = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
+  { id: "pos", label: "Frente de caixa", icon: ShoppingCart },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -422,6 +426,7 @@ export default function App() {
           body: JSON.stringify(Object.fromEntries(f)),
         });
         await refreshMe();
+        setNotice(null);
       }
     } catch (e: any) {
       show(e.message, true);
@@ -479,7 +484,7 @@ export default function App() {
         </section>
         <section className="auth-panel">
           <div className="auth-form">
-            <Badge tone="yellow">PRODUTOS E ESTOQUE</Badge>
+            <Badge tone="yellow">ESTOQUE E FRENTE DE CAIXA</Badge>
             <h2>
               {authMode === "login"
                 ? "Bem-vindo de volta"
@@ -625,6 +630,8 @@ export default function App() {
                   <td className="reason">{m.reason}</td>
                   <td>
                     {can("adjust") &&
+                    !m.sale_item_id &&
+                    !m.return_item_id &&
                     m.type !== "reversal" &&
                     !m.reversal_id ? (
                       <button
@@ -675,7 +682,11 @@ export default function App() {
         <div className="nav-label">GESTÃO DA OPERAÇÃO</div>
         <nav>
           {nav
-            .filter((n) => n.id !== "audit" || can("audit"))
+            .filter(
+              (n) =>
+                (n.id !== "audit" || can("audit")) &&
+                (n.id !== "pos" || can("pos_read")),
+            )
             .map((n) => (
               <button
                 key={n.id}
@@ -690,8 +701,8 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulo 1 ativo
-            <small>Produtos e Estoque</small>
+            <span className="status-dot" /> Módulos 1 e 2 ativos
+            <small>Produtos, Estoque e PDV</small>
           </div>
           <button
             className="profile"
@@ -759,6 +770,7 @@ export default function App() {
                 {
                   {
                     overview: "Uma visão clara do seu estoque, em tempo real.",
+                    pos: "Vendas, pagamentos e caixa integrados ao seu estoque.",
                     products: "Organize seu catálogo e acompanhe cada produto.",
                     units:
                       "Identificação individual, procedência e rastreabilidade.",
@@ -804,6 +816,15 @@ export default function App() {
             />
           ) : (
             <>
+              {view === "pos" && can("pos_read") && (
+                <PosPanel
+                  key={branch}
+                  branch={branch}
+                  permissions={me.permissions}
+                  mutate={mutate}
+                  onNotice={show}
+                />
+              )}
               {view === "overview" && (
                 <>
                   <div className="metrics">
@@ -1406,8 +1427,8 @@ export default function App() {
                             ? "Local persistente · PostgreSQL embarcado"
                             : "PostgreSQL de produção"}
                         </dd>
-                        <dt>Módulo disponível</dt>
-                        <dd>Produtos e Estoque</dd>
+                        <dt>Módulos disponíveis</dt>
+                        <dd>1 · Produtos e Estoque / 2 · Frente de Caixa</dd>
                       </dl>
                     </section>
                     <section className="panel">
@@ -1509,7 +1530,7 @@ export default function App() {
           )}
           <footer className="footer">
             <span>INVICTUS SYSTEMS</span>
-            <span>ERP Mobile · Produtos e Estoque</span>
+            <span>ERP Mobile · Estoque e PDV</span>
           </footer>
         </main>
       </div>
@@ -1753,6 +1774,9 @@ export default function App() {
                         </option>
                         <option value="stock">
                           Estoquista · leitura e movimentações, sem custos
+                        </option>
+                        <option value="cashier">
+                          Operador de caixa · vendas e caixa, sem descontos
                         </option>
                         <option value="manager">
                           Gerente · catálogo, custos, inventário e auditoria

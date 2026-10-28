@@ -350,12 +350,7 @@ export class InventoryService {
       return { ok: true };
     });
   }
-  private async lockStock(
-    tx: Tx,
-    i: Identity,
-    product: string,
-    branch: string,
-  ) {
+  async lockStock(tx: Tx, i: Identity, product: string, branch: string) {
     const [p] = await tx.query(
       "SELECT * FROM products WHERE id=$1 FOR UPDATE",
       [product],
@@ -372,7 +367,7 @@ export class InventoryService {
     );
     return { p, stock };
   }
-  private async ledger(
+  async ledger(
     tx: Tx,
     i: Identity,
     b: { branch_id: string; product_id: string; reason: string },
@@ -381,6 +376,7 @@ export class InventoryService {
     type: string,
     unit: string | null = null,
     reverses: string | null = null,
+    links: { saleItemId?: string; returnItemId?: string } = {},
   ) {
     const id = randomUUID();
     await tx.query(
@@ -388,7 +384,7 @@ export class InventoryService {
       [balance, b.product_id, b.branch_id],
     );
     await tx.query(
-      "INSERT INTO stock_movements(id,tenant_id,branch_id,product_id,type,quantity,balance_after,reason,actor_id,unit_id,reverses_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id",
+      "INSERT INTO stock_movements(id,tenant_id,branch_id,product_id,type,quantity,balance_after,reason,actor_id,unit_id,reverses_id,sale_item_id,return_item_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id",
       [
         id,
         i.tenant_id,
@@ -401,6 +397,8 @@ export class InventoryService {
         i.user_id,
         unit,
         reverses,
+        links.saleItemId || null,
+        links.returnItemId || null,
       ],
     );
     await audit(
@@ -471,6 +469,14 @@ export class InventoryService {
           );
           if (!u || u.status !== (b.type === "entry" ? "out" : "in_stock"))
             fail(409, "Aparelho indisponível para esta operação.");
+          if (b.type === "entry") {
+            const [sold] = await tx.query(
+              "SELECT x.id FROM pos_sale_items x WHERE x.unit_id=$1 AND NOT EXISTS(SELECT 1 FROM pos_return_items r WHERE r.sale_item_id=x.id) LIMIT 1",
+              [u.id],
+            );
+            if (sold)
+              fail(409, "Aparelho vendido: registre a devolução pelo PDV.");
+          }
           unit = u.id;
           await tx.query(
             "UPDATE device_units SET status=$1 WHERE id=$2 RETURNING id",
@@ -543,6 +549,11 @@ export class InventoryService {
       ]);
       if (!m) fail(404, "Movimentação não encontrada.");
       branchAccess(i, m.branch_id);
+      if (m.sale_item_id || m.return_item_id)
+        fail(
+          409,
+          "Use cancelamento ou devolução no PDV para corrigir esta movimentação.",
+        );
       if (m.type === "reversal")
         fail(409, "Registre uma nova movimentação para corrigir um estorno.");
       const { stock } = await this.lockStock(tx, i, m.product_id, m.branch_id);

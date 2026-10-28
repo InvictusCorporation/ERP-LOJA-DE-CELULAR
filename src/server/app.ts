@@ -14,6 +14,7 @@ import cookieParser from "cookie-parser";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { Database } from "./db";
+import { PosService } from "./pos";
 import {
   InventoryService,
   validate,
@@ -56,6 +57,7 @@ class ApiController {
   constructor(
     @Inject(Database) private db: Database,
     @Inject(InventoryService) private inventory: InventoryService,
+    @Inject(PosService) private pos: PosService,
   ) {}
   @All("{*path}")
   async handle(@Req() req: Request, @Res() res: Response) {
@@ -70,8 +72,9 @@ class ApiController {
         res.status(error.getStatus()).json({ error: error.message });
       else if (code === "23505" || error.code === "P2002")
         res.status(409).json({
-          error:
-            "Já existe um cadastro com este SKU, código de barras, IMEI, série, nome ou e-mail.",
+          error: req.path.startsWith("/api/pos/")
+            ? "Caixa, sessão ou operação já registrada. Atualize os dados e confira o histórico."
+            : "Já existe um cadastro com este SKU, código de barras, IMEI, série, nome ou e-mail.",
         });
       else if (code === "23503")
         res
@@ -199,7 +202,7 @@ class ApiController {
           [i.branch_ids],
         );
         return {
-          user: { name: i.name, email: i.email, role: i.role },
+          user: { id: i.user_id, name: i.name, email: i.email, role: i.role },
           tenant,
           branches,
           permissions: permissions(i.role),
@@ -215,6 +218,40 @@ class ApiController {
       res.clearCookie("invictus_session", cookieOptions());
       return { ok: true };
     }
+    if (path === "/pos/state" && method === "GET")
+      return this.pos.state(
+        i,
+        String(req.query.branch_id || ""),
+        req.query.register_id ? String(req.query.register_id) : undefined,
+      );
+    if (path === "/pos/registers" && method === "POST")
+      return this.pos.register(i, body, key);
+    if (path === "/pos/open" && method === "POST")
+      return this.pos.open(i, body, key);
+    if (path === "/pos/cash" && method === "POST")
+      return this.pos.cashOperation(i, body, key);
+    if (path === "/pos/close" && method === "POST")
+      return this.pos.close(i, body, key);
+    if (path === "/pos/sales" && method === "POST")
+      return this.pos.checkout(i, body, key);
+    if (path === "/pos/sales" && method === "GET")
+      return this.pos.history(
+        i,
+        String(req.query.branch_id || ""),
+        validate(
+          z.coerce.number().int().min(1).max(100000),
+          req.query.page || 1,
+        ),
+        String(req.query.q || ""),
+      );
+    const saleReceipt = path.match(/^\/pos\/sales\/([\w-]+)$/);
+    if (saleReceipt && method === "GET")
+      return this.pos.receipt(i, saleReceipt[1]);
+    const saleRefund = path.match(/^\/pos\/sales\/([\w-]+)\/return$/);
+    if (saleRefund && method === "POST")
+      return this.pos.refund(i, saleRefund[1], body, key);
+    if (path === "/pos/report" && method === "GET")
+      return this.pos.report(i, String(req.query.branch_id || ""));
     if (path === "/overview" && method === "GET")
       return this.inventory.overview(i, String(req.query.branch_id || ""));
     if (path === "/products" && method === "GET")
@@ -367,7 +404,7 @@ class ApiController {
               .max(254)
               .transform((v) => v.toLowerCase()),
             password: z.string().min(12).max(128),
-            role: z.enum(["manager", "stock", "viewer"]),
+            role: z.enum(["manager", "stock", "viewer", "cashier"]),
             branch_ids: z.array(uuid).min(1).max(100),
           })
           .strict(),
@@ -397,6 +434,10 @@ export async function createApp(db: Database) {
     providers: [
       { provide: Database, useValue: db },
       { provide: InventoryService, useValue: new InventoryService(db) },
+      {
+        provide: PosService,
+        useValue: new PosService(db, new InventoryService(db)),
+      },
     ],
   })
   class AppModule {}

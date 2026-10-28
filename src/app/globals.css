@@ -311,6 +311,7 @@ tbody tr:hover {
   min-height: 100vh;
 }
 .sidebar {
+  overflow-y: auto;
   background: #17181b;
   width: 245px;
   flex: 0 0 245px;

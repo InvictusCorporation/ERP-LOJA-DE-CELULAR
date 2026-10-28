@@ -10,6 +10,7 @@ import {
   unlink,
 } from "node:fs/promises";
 import { resolve, join } from "node:path";
+import { createHash } from "node:crypto";
 
 // OneDrive marks Windows directories read-only as a presentation attribute.
 // NODEFS maps that attribute to POSIX 0444, which PostgreSQL interprets as a
@@ -93,17 +94,42 @@ export class Database {
       const found = await this.embedded.query<{ name: string }>(
         "SELECT tablename AS name FROM pg_tables WHERE schemaname='public' AND tablename='tenants'",
       );
-      if (!found.rows.length)
+      await this.embedded.exec(
+        "CREATE TABLE IF NOT EXISTS _invictus_migrations(name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())",
+      );
+      const migrations = (
+        await readdir(resolve("prisma/migrations"), { withFileTypes: true })
+      )
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name)
+        .sort();
+      for (const name of migrations) {
+        const sql = (
+          await readFile(
+            resolve("prisma/migrations", name, "migration.sql"),
+            "utf8",
+          )
+        ).replace(/\r\n/g, "\n");
+        const checksum = createHash("sha256").update(sql).digest("hex");
+        const { rows } = await this.embedded.query<{ checksum: string }>(
+          "SELECT checksum FROM _invictus_migrations WHERE name=$1",
+          [name],
+        );
+        if (rows[0]) {
+          if (rows[0].checksum !== checksum)
+            throw new Error(`Migração já aplicada foi alterada: ${name}`);
+          continue;
+        }
         await this.embedded.transaction(async (tx) => {
-          await tx.exec(
-            await readFile(
-              resolve(
-                "prisma/migrations/202610280001_foundation/migration.sql",
-              ),
-              "utf8",
-            ),
+          // Adopt databases created by v0.1 without recreating their tables.
+          if (!(name === "202610280001_foundation" && found.rows.length))
+            await tx.exec(sql);
+          await tx.query(
+            "INSERT INTO _invictus_migrations(name,checksum) VALUES($1,$2)",
+            [name, checksum],
           );
         });
+      }
     }
   }
   async system<T>(sql: string, params: any[] = []): Promise<T[]> {

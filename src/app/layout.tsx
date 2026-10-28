@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "Invictus ERP Mobile · Produtos e Estoque",
-  description: "Gestão de produtos, aparelhos e estoque por filial.",
+  title: "Invictus ERP Mobile · Estoque e PDV",
+  description:
+    "Gestão de produtos, aparelhos, estoque e frente de caixa por filial.",
 };
 export default function RootLayout({
   children,

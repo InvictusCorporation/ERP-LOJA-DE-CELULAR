@@ -1,6 +1,6 @@
 # Invictus ERP Mobile
 
-Primeira etapa: **Produtos e Estoque**, com infraestrutura mínima. Os módulos 2–12 não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
+Módulos disponíveis: **1 — Produtos e Estoque** e **2 — Frente de Caixa (PDV)**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 3–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
 ## Executar localmente
 
@@ -25,7 +25,21 @@ O banco PostgreSQL embarcado (PGlite) fica em `.data/invictus`. Os registros sob
 5. Em **Inventário**, configure o estoque mínimo e registre uma contagem física. Divergências de aparelhos exigem reconciliar as unidades individualmente antes de concluir a contagem.
 6. Confira os indicadores e a auditoria. Recarregue a página para confirmar a persistência.
 
-Em **Configurações**, o proprietário pode cadastrar filiais básicas e acessos locais. Os perfis mínimos são proprietário, gerente, estoquista e consulta. A gestão completa de funcionários e filiais pertence a etapas futuras.
+Em **Configurações**, o proprietário pode cadastrar filiais básicas e acessos locais. Os perfis mínimos são proprietário, gerente, estoquista, consulta e operador de caixa. O operador pode vender e movimentar seu caixa, mas não pode conceder descontos ou autorizar devoluções. A gestão completa de funcionários e filiais pertence a etapas futuras.
+
+## Demonstrar o PDV
+
+1. Abra **Frente de caixa**, selecione um caixa e informe o saldo inicial em dinheiro.
+2. Pesquise produtos ou leia um código de barras com um leitor que envie Enter. Aparelhos exigem selecionar sua unidade física.
+3. Confira quantidades, preços e descontos. Apenas proprietário/gerente concedem desconto nesta etapa.
+4. Escolha **Receber e finalizar**. Divida o pagamento entre dinheiro, Pix, débito e crédito; confira os pagamentos externos e informe suas referências. O troco é calculado somente sobre dinheiro.
+5. Imprima ou baixe o comprovante não fiscal. Consulte as vendas em **Histórico**.
+6. Para corrigir uma venda, use **Devolver itens** ou **Cancelar venda** no comprovante. O estoque e os pagamentos recebem registros compensatórios. A devolução respeita o desconto e as formas de pagamento originais.
+7. Em **Meu caixa**, registre sangrias/suprimentos e confira o dinheiro físico antes de fechar. Diferenças exigem justificativa. Consulte os fechamentos e resultados em **Por operador**.
+
+Pix e cartões são **registros manuais de conferência**, sem cobrança automática, integração bancária ou TEF. Comprovantes não substituem documentos fiscais. Clientes, crediário, contas a receber e emissão fiscal serão integrados nos módulos correspondentes.
+
+O banco local aplica migrações incrementais automaticamente na abertura, preservando os registros da versão anterior. Em produção, execute `pnpm db:migrate` com a conta administrativa antes de iniciar a API atualizada.
 
 ## Verificações
 
@@ -44,5 +58,6 @@ Os testes de API usam PostgreSQL embarcado real, role sem privilégios de propri
 - [Arquitetura e limites](docs/ARQUITETURA.md)
 - [Operação, produção e backup](docs/OPERACAO.md)
 - [Relatório de implementação](docs/ENTREGA-MODULO-1.md)
+- [Relatório do PDV](docs/ENTREGA-MODULO-2.md)
 
 Integrações de identidade, white label, assinaturas e ponto dependem da análise dos projetos existentes da Invictus. Não foi criado um segundo sistema de ponto.

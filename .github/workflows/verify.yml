@@ -1,4 +1,4 @@
-name: Verificar Módulo 1
+name: Verificar módulos 1 e 2
 on: [push, pull_request]
 jobs:
   verify:

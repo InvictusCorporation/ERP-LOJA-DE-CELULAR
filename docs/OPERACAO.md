@@ -24,6 +24,8 @@ Os arquivos de backup contêm dados pessoais e hashes de autenticação. Guarde-
 
 ## PostgreSQL de produção
 
+Atualizações do PDV usam migrações incrementais. Pare as escritas, preserve um backup e execute `pnpm db:migrate` com a conta administrativa antes de iniciar a nova versão. Não substitua o banco nem reaplique manualmente a migração inicial. No ambiente local, as migrações são aplicadas na abertura da API, que fica pronta antes da interface iniciar.
+
 1. Disponibilize PostgreSQL em rede privada com TLS. Separe homologação e produção.
 2. Configure `DATABASE_URL` com o usuário de runtime `invictus_app` e `MIGRATION_DATABASE_URL` com a conta administrativa de migração. Não use segredos no frontend ou no Git.
 3. Execute `pnpm db:migrate`. A migração inicial cria `invictus_app` sem LOGIN. A conta de migração precisa de permissão para criar roles. Se o provedor não permitir, o DBA deverá adaptar esse provisionamento antes da implantação.
