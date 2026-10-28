@@ -1,4 +1,4 @@
-# Arquitetura — etapa 1
+# Arquitetura — módulos 1 e 2
 
 ## Componentes
 
@@ -37,8 +37,10 @@ Planos Básico/Profissional/Completo e Ponto independente permanecem planejados.
 
 ## Mapa de módulos
 
+Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, sem antecipar módulos 9 ou 10. As bases mínimas de acesso, filial e pagamentos não equivalem à implementação integral dos módulos futuros.
+
 1. Produtos e Estoque — implementado nesta etapa.
-2. PDV — futuro; estoque, clientes e financeiro.
+2. PDV — implementado: vendas, caixa, pagamentos, devoluções, comprovantes e relatórios por operador. Clientes e financeiro avançado serão conectados nas etapas 4 e 5.
 3. Assistência Técnica — futuro; estoque, clientes, técnicos e financeiro.
 4. CRM — futuro; cadastro e históricos comerciais.
 5. Financeiro — futuro; títulos, liquidações e resultados.
@@ -49,3 +51,15 @@ Planos Básico/Profissional/Completo e Ponto independente permanecem planejados.
 10. Filiais — futuro; apenas cadastro básico e saldos separados nesta etapa.
 11. Fiscal — futuro; integração homologada com provedor.
 12. Ponto — futuro; reutilização do projeto existente e contratação independente.
+
+## Transações do PDV
+
+O PDV usa centavos inteiros. O servidor relê preços e disponibilidade, valida o total confirmado na interface, distribui descontos proporcionalmente com cálculo inteiro e grava venda, itens, pagamentos, estoque e auditoria na mesma transação. O registro do pagamento é separado do movimento de dinheiro no caixa: Pix/cartões não aumentam o saldo físico.
+
+Cada caixa tem uma sessão por vez e cada operador tem no máximo uma sessão aberta por filial. Operações e fechamento bloqueiam a sessão; vendas bloqueiam produtos e saldos em ordem estável. Duas vendas não podem consumir a mesma última unidade. Chaves de idempotência protegem abertura, venda, sangria, suprimento, fechamento e devolução.
+
+Cancelamentos e devoluções preservam a venda original. Quantidades e valores já devolvidos são considerados na próxima devolução. Os centavos de arredondamento são recuperados na última unidade; o total devolvido nunca supera o valor líquido original. Devoluções precisam de uma sessão própria aberta na filial, mesmo que a sessão original já tenha sido fechada.
+
+Movimentos de estoque ligados ao PDV não podem ser estornados pelo endpoint genérico de estoque. Aparelhos vendidos retornam pelo fluxo de devolução para manter a coerência dos pagamentos. O papel de runtime não pode alterar ou excluir pagamentos, devoluções, itens ou lançamentos de dinheiro já registrados.
+
+Relatórios são limitados pela empresa e filial. Operadores de caixa consultam suas próprias vendas e sessões; proprietário e gerente podem supervisionar a filial autorizada. O relatório básico por operador não substitui o futuro Módulo 8 de relatórios gerenciais.
