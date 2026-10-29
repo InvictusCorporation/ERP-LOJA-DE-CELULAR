@@ -26,6 +26,7 @@ const payment = z
 const checkoutSchema = z
   .object({
     session_id: uuid,
+    customer_id: uuid.optional(),
     items: z
       .array(
         z
@@ -400,6 +401,19 @@ export class PosService {
       { action: "pos.checkout", b },
       async (tx) => {
         const s = await this.session(tx, i, b.session_id, true);
+        let customerName = "";
+        if (b.customer_id) {
+          const [customer] = await tx.query(
+            "SELECT name FROM customers WHERE id=$1 AND active FOR SHARE",
+            [b.customer_id],
+          );
+          if (!customer)
+            fail(
+              400,
+              "Cliente indisponível nesta empresa. Confira o cadastro.",
+            );
+          customerName = customer.name;
+        }
         const locked = new Map<string, any>();
         for (const product of [
           ...new Set(b.items.map((x) => x.product_id)),
@@ -471,7 +485,7 @@ export class PosService {
         const id = randomUUID(),
           code = `V-${id.toUpperCase()}`;
         await tx.query(
-          "INSERT INTO pos_sales(id,tenant_id,branch_id,session_id,operator_id,receipt_code,subtotal_cents,discount_cents,total_cents,change_cents,status,note) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'completed',$11) RETURNING id",
+          "INSERT INTO pos_sales(id,tenant_id,branch_id,session_id,operator_id,receipt_code,subtotal_cents,discount_cents,total_cents,change_cents,status,note,customer_id,customer_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'completed',$11,$12,$13) RETURNING id",
           [
             id,
             i.tenant_id,
@@ -484,6 +498,8 @@ export class PosService {
             total,
             change,
             b.note,
+            b.customer_id || null,
+            customerName,
           ],
         );
         for (let index = 0; index < lines.length; index++) {

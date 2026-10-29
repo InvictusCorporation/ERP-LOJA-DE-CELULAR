@@ -146,6 +146,7 @@ function DownloadReceipt({ receipt }: { receipt: Row }) {
       r.sale.branch_name,
       "COMPROVANTE NÃO FISCAL",
       r.sale.receipt_code,
+      ...(r.sale.customer_name ? ['Cliente: '+r.sale.customer_name] : []),
       when(r.sale.created_at),
       `Operador: ${r.sale.operator_name}`,
       `Situação: ${statusNames[r.sale.status]}`,
@@ -202,6 +203,9 @@ export default function PosPanel({
   onNotice,
 }: Props) {
   const can = (p: string) => permissions.includes(p);
+  const [customerQuery, setCustomerQuery] = useState(""),
+    [customerMatches, setCustomerMatches] = useState<Row[]>([]),
+    [saleCustomer, setSaleCustomer] = useState<Row | null>(null);
   const [tab, setTab] = useState("sale"),
     [state, setState] = useState<Row>({}),
     [register, setRegister] = useState(""),
@@ -224,6 +228,26 @@ export default function PosPanel({
   const busyRef = useRef(false),
     loadId = useRef(0);
   const scanRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    let alive = true;
+    const timer = setTimeout(() => {
+      if (dialog !== "checkout" || customerQuery.trim().length < 2) {
+        setCustomerMatches([]);
+        return;
+      }
+      get("/crm/lookup?q=" + encodeURIComponent(customerQuery))
+        .then((r) => {
+          if (alive) setCustomerMatches(r.items);
+        })
+        .catch((e) => {
+          if (alive) onNotice(e.message, true);
+        });
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [dialog, customerQuery, onNotice]);
   const subtotal = cart.reduce((n, l) => n + l.price * l.quantity, 0);
   let discountValue = 0;
   try {
@@ -490,6 +514,7 @@ export default function PosPanel({
       if (dialog === "checkout") {
         const r = await mutate("/pos/sales", {
           session_id: state.session.id,
+          ...(saleCustomer ? { customer_id: saleCustomer.id } : {}),
           items: cart.map((l) => ({
             product_id: l.product_id,
             quantity: l.quantity,
@@ -505,6 +530,8 @@ export default function PosPanel({
           note: value("note"),
         });
         setCart([]);
+        setSaleCustomer(null);
+        setCustomerQuery("");
         setDiscount("0");
         await viewReceipt(r.id);
         onNotice(`Venda registrada. Troco: ${formatCents(r.change_cents)}.`);
@@ -1268,6 +1295,9 @@ export default function PosPanel({
                 {when(receipt.sale.created_at)} · {receipt.sale.operator_name}
               </p>
               <span className="badge">{statusNames[receipt.sale.status]}</span>
+              {receipt.sale.customer_name && (
+                <p>Cliente: {receipt.sale.customer_name}</p>
+              )}
             </div>
             {receipt.items.map((l: Row) => (
               <div key={l.id} className="pos-receipt-line">
@@ -1459,6 +1489,48 @@ export default function PosPanel({
               )}
               {dialog === "checkout" && (
                 <>
+                  <Field label="Cliente da venda (opcional)">
+                    <input
+                      placeholder="Buscar nome ou telefone"
+                      value={customerQuery}
+                      onChange={(e) => {
+                        setCustomerQuery(e.target.value);
+                        setSaleCustomer(null);
+                      }}
+                      autoComplete="off"
+                    />
+                  </Field>
+                  {saleCustomer ? (
+                    <p className="form-hint">
+                      Cliente selecionado: <strong>{saleCustomer.name}</strong>{" "}
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => {
+                          setSaleCustomer(null);
+                          setCustomerQuery("");
+                        }}
+                      >
+                        Remover
+                      </button>
+                    </p>
+                  ) : (
+                    <div className="crm-matches">
+                      {customerMatches.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setSaleCustomer(c);
+                            setCustomerQuery("");
+                            setCustomerMatches([]);
+                          }}
+                        >
+                          {c.name} · Telefone final {c.phone_suffix}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <p className="pos-total-banner">
                     Total a receber<strong>{formatCents(total)}</strong>
                   </p>

@@ -37,9 +37,11 @@ import {
   CircleHelp,
   ShoppingCart,
   Wrench,
+  UsersRound,
 } from "lucide-react";
 import PosPanel from "./pos-panel";
 import RepairsPanel from "./repairs-panel";
+import CrmPanel from "./crm-panel";
 
 type Row = Record<string, any>;
 type Me = {
@@ -91,6 +93,7 @@ const nav = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "pos", label: "Frente de caixa", icon: ShoppingCart },
   { id: "repairs", label: "Assistência técnica", icon: Wrench },
+  { id: "crm", label: "CRM e clientes", icon: UsersRound },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -691,7 +694,8 @@ export default function App() {
               (n) =>
                 (n.id !== "audit" || can("audit")) &&
                 (n.id !== "pos" || can("pos_read")) &&
-                (n.id !== "repairs" || can("service_read")),
+                (n.id !== "repairs" || can("service_read")) &&
+                (n.id !== "crm" || can("crm_read")),
             )
             .map((n) => (
               <button
@@ -707,8 +711,8 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 a 3 ativos
-            <small>Estoque, PDV e Assistência</small>
+            <span className="status-dot" /> Módulos 1 a 4 ativos
+            <small>Estoque, PDV, Assistência e CRM</small>
           </div>
           <button
             className="profile"
@@ -777,6 +781,7 @@ export default function App() {
                   {
                     overview: "Uma visão clara do seu estoque, em tempo real.",
                     pos: "Vendas, pagamentos e caixa integrados ao seu estoque.",
+                    crm: "Clientes, históricos e próximos passos do atendimento.",
                     repairs:
                       "Do recebimento à entrega, acompanhe cada etapa do reparo.",
                     products: "Organize seu catálogo e acompanhe cada produto.",
@@ -838,6 +843,14 @@ export default function App() {
                   key={branch}
                   branch={branch}
                   permissions={me.permissions}
+                  mutate={mutate}
+                  onNotice={show}
+                />
+              )}
+              {view === "crm" && can("crm_read") && (
+                <CrmPanel
+                  key={branch}
+                  branch={branch}
                   mutate={mutate}
                   onNotice={show}
                 />
@@ -1445,7 +1458,9 @@ export default function App() {
                             : "PostgreSQL de produção"}
                         </dd>
                         <dt>Módulos disponíveis</dt>
-                        <dd>1 · Estoque / 2 · PDV / 3 · Assistência Técnica</dd>
+                        <dd>
+                          1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM
+                        </dd>
                       </dl>
                     </section>
                     <section className="panel">
@@ -1547,7 +1562,7 @@ export default function App() {
           )}
           <footer className="footer">
             <span>INVICTUS SYSTEMS</span>
-            <span>ERP Mobile · Estoque e PDV</span>
+            <span>Invictus ERP Mobile</span>
           </footer>
         </main>
       </div>

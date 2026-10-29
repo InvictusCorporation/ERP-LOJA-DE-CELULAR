@@ -16,6 +16,7 @@ import { randomUUID } from "node:crypto";
 import { Database } from "./db";
 import { PosService } from "./pos";
 import { RepairService } from "./repairs";
+import { CrmService } from "./crm";
 import {
   InventoryService,
   validate,
@@ -60,6 +61,7 @@ class ApiController {
     @Inject(InventoryService) private inventory: InventoryService,
     @Inject(PosService) private pos: PosService,
     @Inject(RepairService) private repairs: RepairService,
+    @Inject(CrmService) private crm: CrmService,
   ) {}
   @All("{*path}")
   async handle(@Req() req: Request, @Res() res: Response) {
@@ -219,6 +221,67 @@ class ApiController {
       );
       res.clearCookie("invictus_session", cookieOptions());
       return { ok: true };
+    }
+    const crmPage = () =>
+      validate(z.coerce.number().int().min(1).max(100000), req.query.page || 1);
+    if (path === "/crm/lookup" && method === "GET")
+      return this.crm.lookup(i, String(req.query.q || ""));
+    if (path === "/crm/team" && method === "GET")
+      return this.crm.team(i, String(req.query.branch_id || ""));
+    if (path === "/crm/customers" && method === "GET")
+      return this.crm.list(
+        i,
+        String(req.query.q || ""),
+        String(req.query.status || "active"),
+        crmPage(),
+      );
+    if (path === "/crm/customers" && method === "POST")
+      return this.crm.create(i, body, key);
+    const crmCustomer = path.match(
+      /^\/crm\/customers\/([\w-]+)(?:\/(history|consent|state|interactions|contact))?$/,
+    );
+    if (crmCustomer) {
+      const [, id, action] = crmCustomer;
+      if (method === "GET" && !action) return this.crm.detail(i, id);
+      if (method === "GET" && action === "history")
+        return this.crm.history(
+          i,
+          id,
+          String(req.query.kind || "events"),
+          crmPage(),
+        );
+      if (method === "GET" && action === "contact")
+        return this.crm.contact(i, id);
+      if (method === "POST" && !action)
+        return this.crm.update(i, id, body, key);
+      if (method === "POST" && action === "consent")
+        return this.crm.consent(i, id, body, key);
+      if (method === "POST" && action === "state")
+        return this.crm.state(i, id, body, key);
+      if (method === "POST" && action === "interactions")
+        return this.crm.interaction(i, id, body, key);
+    }
+    const crmBoard = path.match(
+      /^\/crm\/(opportunities|tasks)(?:\/([\w-]+))?$/,
+    );
+    if (crmBoard) {
+      const [, kind, id] = crmBoard;
+      if (method === "GET" && !id)
+        return this.crm.board(
+          i,
+          String(req.query.branch_id || ""),
+          kind,
+          crmPage(),
+          String(req.query.status || (kind === "tasks" ? "pending" : "all")),
+        );
+      if (method === "POST" && !id)
+        return kind === "tasks"
+          ? this.crm.createTask(i, body, key)
+          : this.crm.createOpportunity(i, body, key);
+      if (method === "POST" && id)
+        return kind === "tasks"
+          ? this.crm.updateTask(i, id, body, key)
+          : this.crm.updateOpportunity(i, id, body, key);
     }
     if (path === "/repairs/technicians" && method === "GET")
       return this.repairs.technicians(i, String(req.query.branch_id || ""));
@@ -493,6 +556,10 @@ export async function createApp(db: Database) {
   @Module({
     controllers: [ApiController],
     providers: [
+      {
+        provide: CrmService,
+        useValue: new CrmService(db, new InventoryService(db)),
+      },
       { provide: Database, useValue: db },
       { provide: InventoryService, useValue: new InventoryService(db) },
       {

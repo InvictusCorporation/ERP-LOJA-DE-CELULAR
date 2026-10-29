@@ -39,6 +39,10 @@ Os testes locais não comprovam o comportamento da conexão Prisma contra o Post
 
 ## Recuperação e incidentes
 
+O módulo 4 adiciona a quinta migração, `202610280005_crm`, sem substituir os clientes existentes. A cópia offline anterior à atualização fica em `backups/pre-modulo4-20261028`. Confirme clientes, vínculos de vendas, oportunidades, lembretes, preferências e eventos após restaurar o banco. Não edite migrações aplicadas. Dados de CRM e evidências de contato acompanham os mesmos backups privados do ERP.
+
+O CRM é restrito à gestão. Revise os acessos de empresa e filial antes de usar informações pessoais reais. A busca do caixa retorna dados mínimos; não concede acesso aos históricos. Contatos e lembretes são manuais/internos. A integração oficial com WhatsApp, seus contratos, credenciais e regras de envio permanecem pendentes de uma implementação específica.
+
 Antes da atualização local do módulo 3 foi preservada uma cópia offline em `backups/pre-modulo3-20261028`. Esse diretório é local e não acompanha o Git. As fotos das ordens ficam no banco e devem ser incluídas nas verificações de restauração. Monitore espaço, tempo de backup e acesso aos dados pessoais. Para volumes maiores, planeje armazenamento privado de objetos e sua recuperação conjunta antes de migrar as imagens.
 
 Ordens entregues são somente consulta. Correções de peças devem ocorrer pelo fluxo da assistência antes da entrega, preservando consumos e devoluções. Consulte os históricos e a trilha de eventos ao reconciliar uma ordem com o estoque.
