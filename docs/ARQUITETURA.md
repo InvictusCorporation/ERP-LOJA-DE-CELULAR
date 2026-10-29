@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 3
+# Arquitetura — módulos 1 a 4
 
 ## Componentes
 
@@ -42,7 +42,7 @@ Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, sem antecipar módulo
 1. Produtos e Estoque — implementado nesta etapa.
 2. PDV — implementado: vendas, caixa, pagamentos, devoluções, comprovantes e relatórios por operador. Clientes e financeiro avançado serão conectados nas etapas 4 e 5.
 3. Assistência Técnica — implementado: ordens, diagnóstico, fotos privadas, orçamentos, aprovação manual, peças, custos, entrega e garantia. Recebimentos aguardam integração financeira.
-4. CRM — futuro; cadastro e históricos comerciais.
+4. CRM — implementado: clientes compartilhados, compras/aparelhos/serviços, prazos de garantia, atividades, funil, responsáveis, lembretes e preferência de contato comercial.
 5. Financeiro — futuro; títulos, liquidações e resultados.
 6. Crediário — futuro; PDV, clientes e financeiro.
 7. Compras — futuro; estoque e contas a pagar.
@@ -73,3 +73,13 @@ Peças movimentam o mesmo ledger do estoque em uma transação com a ordem. Cons
 Fotos são bytes privados no banco, protegidos pelas mesmas verificações de empresa, filial e técnico. Aceitam JPEG, PNG e WebP de até 5 MB e 20 megapixels. O servidor remove metadados, corrige orientação e limita a imagem a 1600 pixels e 1,5 MB em JPEG. Cada ordem aceita até 12 fotos. O backup inclui as imagens; não há bucket público ou integração com armazenamento de objetos nesta versão.
 
 O preço final usa a mão de obra aprovada e peças líquidas efetivamente consumidas. Custos de mão de obra e peças permitem acompanhamento operacional, sem substituir custeio contábil ou DRE. O comprovante de entrega não é recibo de pagamento nem documento fiscal.
+
+## CRM e clientes
+
+O módulo 4 amplia a tabela `customers` da assistência com localidade, observações, arquivamento e versão. Não cria um cadastro paralelo. A base pertence à empresa e é compartilhada entre filiais; proprietário e gerente podem administrá-la. Históricos transacionais, funil, agenda e atendimentos são filtrados pelas filiais autorizadas. Caixa consulta somente identificador, nome e quatro últimos dígitos do telefone na busca para venda; técnicos e estoquistas não acessam o CRM.
+
+Vendas novas aceitam cliente opcional, validado na mesma transação e com nome preservado no comprovante. Ordens mantêm os dados recebidos originalmente. Alterar o cadastro não reescreve esses documentos. Vendas anônimas anteriores não são associadas por aproximação de nome ou telefone. O histórico de compras considera quantidades e valores devolvidos, identificadores individuais e garantia cadastrada a partir da data da venda em Fortaleza; serviços iniciam o prazo na entrega. A consulta dos prazos não decide automaticamente a cobertura de uma solicitação.
+
+Oportunidades e lembretes pertencem à filial, referenciam o cliente e um proprietário/gerente ativo com acesso à unidade. Versões e idempotência impedem sobrescrita e duplicação; eventos comerciais são imutáveis. Encerrar ou reabrir oportunidade exige motivo. Uma oportunidade ganha não registra faturamento. A agenda mantém data/hora com fuso; pendências e atrasos são calculados no servidor, sem agendamento de mensagens ou notificações externas.
+
+Preferência comercial tem evidência, autor e data, com revogação. No recebimento da assistência, a preferência inicial também gera evento. O link manual de WhatsApp exige cliente ativo e permissão; o ERP não guarda credenciais, envia mensagens ou afirma conexão com a API do WhatsApp. O cadastro não exige documentos pessoais, endereço completo ou data de nascimento. Notas devem conter apenas o necessário ao atendimento. Eventos gerais de auditoria não copiam o conteúdo do cadastro; detalhes de contato ficam no histórico protegido do CRM. Arquivamento mantém documentos e impede novas operações; política de retenção, atendimento a solicitações de titulares e avaliação jurídica de produção ainda devem ser definidos pela empresa.

@@ -179,7 +179,7 @@ export class RepairService {
     permit(i, "service_manage");
     return this.db.transaction(i.tenant_id, async (tx) => ({
       items: await tx.query(
-        "SELECT id,name,phone,email FROM customers WHERE name ILIKE $1 OR phone ILIKE $1 ORDER BY name LIMIT 30",
+        "SELECT id,name,phone,email FROM customers WHERE active AND (name ILIKE $1 OR phone ILIKE $1) ORDER BY name LIMIT 30",
         [`%${q.slice(0, 100)}%`],
       ),
     }));
@@ -226,9 +226,10 @@ export class RepairService {
         await this.technician(tx, i, b.branch_id, b.technician_id);
         let customer: Row;
         if (b.customer_id) {
-          const [c] = await tx.query("SELECT * FROM customers WHERE id=$1", [
-            b.customer_id,
-          ]);
+          const [c] = await tx.query(
+            "SELECT * FROM customers WHERE id=$1 AND active FOR SHARE",
+            [b.customer_id],
+          );
           if (!c) fail(400, "Cliente não encontrado nesta empresa.");
           customer = c;
         } else {
@@ -239,6 +240,21 @@ export class RepairService {
             [id, i.tenant_id, c.name, c.phone, c.email, c.contact_permission],
           );
           customer = { ...c, id };
+          await tx.query(
+            "INSERT INTO crm_events(id,tenant_id,customer_id,entity_id,action,details,actor_id) VALUES($1,$2,$3,$3,$4,$5::jsonb,$6) RETURNING id",
+            [
+              randomUUID(),
+              i.tenant_id,
+              id,
+              "contact_permission",
+              JSON.stringify({
+                allowed: c.contact_permission,
+                evidence:
+                  "Preferência informada no recebimento da ordem de serviço",
+              }),
+              i.user_id,
+            ],
+          );
         }
         const id = randomUUID(),
           code = `OS-${id.toUpperCase()}`;
