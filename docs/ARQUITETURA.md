@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 4
+# Arquitetura — módulos 1 a 5
 
 ## Componentes
 
@@ -40,10 +40,10 @@ Planos Básico/Profissional/Completo e Ponto independente permanecem planejados.
 Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, sem antecipar módulos 9 ou 10. As bases mínimas de acesso, filial e pagamentos não equivalem à implementação integral dos módulos futuros.
 
 1. Produtos e Estoque — implementado nesta etapa.
-2. PDV — implementado: vendas, caixa, pagamentos, devoluções, comprovantes e relatórios por operador. Clientes e financeiro avançado serão conectados nas etapas 4 e 5.
-3. Assistência Técnica — implementado: ordens, diagnóstico, fotos privadas, orçamentos, aprovação manual, peças, custos, entrega e garantia. Recebimentos aguardam integração financeira.
+2. PDV — implementado: vendas, caixa, pagamentos, devoluções, comprovantes e relatórios por operador, integrado a clientes e financeiro.
+3. Assistência Técnica — implementado: ordens, diagnóstico, fotos privadas, orçamentos, aprovação manual, peças, custos, entrega e garantia, com recebível gerado na entrega do reparo.
 4. CRM — implementado: clientes compartilhados, compras/aparelhos/serviços, prazos de garantia, atividades, funil, responsáveis, lembretes e preferência de contato comercial.
-5. Financeiro — futuro; títulos, liquidações e resultados.
+5. Financeiro — implementado: pagar/receber, baixas e estornos, contas, centros, conciliação manual, fluxo realizado/previsto, DRE gerencial, margens e consolidação por filial.
 6. Crediário — futuro; PDV, clientes e financeiro.
 7. Compras — futuro; estoque e contas a pagar.
 8. Relatórios — futuro; consolidação dos módulos operacionais.
@@ -83,3 +83,15 @@ Vendas novas aceitam cliente opcional, validado na mesma transação e com nome 
 Oportunidades e lembretes pertencem à filial, referenciam o cliente e um proprietário/gerente ativo com acesso à unidade. Versões e idempotência impedem sobrescrita e duplicação; eventos comerciais são imutáveis. Encerrar ou reabrir oportunidade exige motivo. Uma oportunidade ganha não registra faturamento. A agenda mantém data/hora com fuso; pendências e atrasos são calculados no servidor, sem agendamento de mensagens ou notificações externas.
 
 Preferência comercial tem evidência, autor e data, com revogação. No recebimento da assistência, a preferência inicial também gera evento. O link manual de WhatsApp exige cliente ativo e permissão; o ERP não guarda credenciais, envia mensagens ou afirma conexão com a API do WhatsApp. O cadastro não exige documentos pessoais, endereço completo ou data de nascimento. Notas devem conter apenas o necessário ao atendimento. Eventos gerais de auditoria não copiam o conteúdo do cadastro; detalhes de contato ficam no histórico protegido do CRM. Arquivamento mantém documentos e impede novas operações; política de retenção, atendimento a solicitações de titulares e avaliação jurídica de produção ainda devem ser definidos pela empresa.
+
+## Gestão financeira
+
+O módulo 5 separa competência, baixas e classificação bancária. Títulos manuais operacionais reconhecem receitas/despesas na competência. Títulos patrimoniais, como compras de estoque, mantêm saldos e baixas sem duplicar despesas na DRE, que já considera o custo da mercadoria vendida. Vendas são reconhecidas na operação, devoluções na data da devolução com reversão proporcional do CMV, e serviços na entrega, usando custos preservados de mão de obra e peças. Baixas mudam os saldos abertos e o fluxo realizado, sem reconhecer novamente a receita/despesa. DRE e margem são gerenciais, sem apuração fiscal. Cancelamento de título manual sem baixas exclui sua competência, mantendo o evento.
+
+Financeiro utiliza contas por filial e centros compartilhados. Transferências têm duas pernas na mesma transação; saldos iniciais, transferências e ajustes patrimoniais não entram na DRE. O saldo da conta soma entradas e saídas próprias e movimentos do PDV classificados nela. O fluxo registrado inclui operações do PDV ainda sem conta; a classificação posterior não duplica o movimento. Abertura de caixa, sangria e suprimento do PDV não são novas receitas/despesas financeiras. Taxas são lançadas separadamente.
+
+Triggers com privilégios do chamador e RLS gravam os recebimentos/devoluções do PDV e recebível da assistência na transação de origem. Chaves de origem e identificadores estáveis impedem duplicação. Migrações adotam operações anteriores. Serviços anteriores à implantação ficam com saldo a conferir, pois podem ter sido pagos externamente. A conferência documentada informa o saldo aberto e o valor recebido anteriormente, sem criar entrada fictícia nas contas atuais. Até essa conferência, o título não participa de aberto/previsto. Serviços novos entregues após a atualização geram recebível normal.
+
+Ledger e baixas aceitam somente SELECT/INSERT na role de runtime. Estornos são lançamentos compensatórios; versões e bloqueios de título impedem baixa em excesso. Conciliação tem conta, valor exato, data e referência conferidos manualmente. Bloqueios transacionais consultivos serializam conciliação e estorno sem conceder UPDATE ao ledger. Desfazer só altera as colunas de vigência da conciliação, preservando conta e referência originais. Eventos e auditoria registram responsáveis e justificativas.
+
+Proprietário e gerente têm acesso; relatórios, contas e movimentos respeitam filiais autorizadas. Consolidação reúne somente essas filiais, com RLS por empresa e chaves compostas. Não há integração bancária automática, cobrança ou transmissão de dinheiro. Credenciadoras, fiscal, crediário e relatórios gerais permanecem nas etapas correspondentes. PostgreSQL externo e recuperação na infraestrutura de produção ainda precisam de homologação.

@@ -39,6 +39,12 @@ Os testes locais não comprovam o comportamento da conexão Prisma contra o Post
 
 ## Recuperação e incidentes
 
+O módulo 5 adiciona `202610280006_finance`, `202610280007_finance_opening_review` e `202610290008_finance_title_classification`. A cópia offline anterior fica em `backups/pre-modulo5-20261028`. Confira títulos, baixas, ledger, contas, conciliações, classificação operacional/patrimonial e saldos importados após restaurar. Não altere migrações já aplicadas. Novas migrações locais são aplicadas antes de a interface ficar pronta.
+
+Após atualizar, confira os recebimentos/devoluções do PDV que aguardam conta e os saldos anteriores de serviços entregues. Serviços antigos podem ter sido pagos externamente: ficam fora do aberto/previsto até a conferência documentada. A baixa posterior usa a conta efetiva e referência. Informe saldos iniciais de contas sem duplicar movimentos históricos que ainda serão classificados. Conciliação é manual, sem credenciais ou conexão bancária automática.
+
+Baixas não são excluídas. Desfaça a conciliação antes de estornar; o sistema grava compensação e preserva a origem. Confira referências de extrato e centros de custo. Cancelamentos manuais sem baixas retiram o título da DRE gerencial por competência, preservando o evento. Integração bancária, apuração fiscal e validação contábil exigem trabalho específico.
+
 O módulo 4 adiciona a quinta migração, `202610280005_crm`, sem substituir os clientes existentes. A cópia offline anterior à atualização fica em `backups/pre-modulo4-20261028`. Confirme clientes, vínculos de vendas, oportunidades, lembretes, preferências e eventos após restaurar o banco. Não edite migrações aplicadas. Dados de CRM e evidências de contato acompanham os mesmos backups privados do ERP.
 
 O CRM é restrito à gestão. Revise os acessos de empresa e filial antes de usar informações pessoais reais. A busca do caixa retorna dados mínimos; não concede acesso aos históricos. Contatos e lembretes são manuais/internos. A integração oficial com WhatsApp, seus contratos, credenciais e regras de envio permanecem pendentes de uma implementação específica.

@@ -38,10 +38,12 @@ import {
   ShoppingCart,
   Wrench,
   UsersRound,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import PosPanel from "./pos-panel";
 import RepairsPanel from "./repairs-panel";
 import CrmPanel from "./crm-panel";
+import FinancePanel from "./finance-panel";
 
 type Row = Record<string, any>;
 type Me = {
@@ -94,6 +96,7 @@ const nav = [
   { id: "pos", label: "Frente de caixa", icon: ShoppingCart },
   { id: "repairs", label: "Assistência técnica", icon: Wrench },
   { id: "crm", label: "CRM e clientes", icon: UsersRound },
+  { id: "finance", label: "Gestão financeira", icon: ChartNoAxesCombined },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -695,7 +698,8 @@ export default function App() {
                 (n.id !== "audit" || can("audit")) &&
                 (n.id !== "pos" || can("pos_read")) &&
                 (n.id !== "repairs" || can("service_read")) &&
-                (n.id !== "crm" || can("crm_read")),
+                (n.id !== "crm" || can("crm_read")) &&
+                (n.id !== "finance" || can("finance_read")),
             )
             .map((n) => (
               <button
@@ -711,8 +715,8 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 a 4 ativos
-            <small>Estoque, PDV, Assistência e CRM</small>
+            <span className="status-dot" /> Módulos 1 a 5 ativos
+            <small>Estoque, PDV, Assistência, CRM e Financeiro</small>
           </div>
           <button
             className="profile"
@@ -782,6 +786,8 @@ export default function App() {
                     overview: "Uma visão clara do seu estoque, em tempo real.",
                     pos: "Vendas, pagamentos e caixa integrados ao seu estoque.",
                     crm: "Clientes, históricos e próximos passos do atendimento.",
+                    finance:
+                      "Recebimentos, pagamentos e resultados da sua operação.",
                     repairs:
                       "Do recebimento à entrega, acompanhe cada etapa do reparo.",
                     products: "Organize seu catálogo e acompanhe cada produto.",
@@ -851,6 +857,15 @@ export default function App() {
                 <CrmPanel
                   key={branch}
                   branch={branch}
+                  mutate={mutate}
+                  onNotice={show}
+                />
+              )}
+              {view === "finance" && can("finance_read") && (
+                <FinancePanel
+                  key={branch}
+                  branch={branch}
+                  branches={me.branches}
                   mutate={mutate}
                   onNotice={show}
                 />
@@ -1459,7 +1474,8 @@ export default function App() {
                         </dd>
                         <dt>Módulos disponíveis</dt>
                         <dd>
-                          1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM
+                          1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM / 5
+                          · Financeiro
                         </dd>
                       </dl>
                     </section>
