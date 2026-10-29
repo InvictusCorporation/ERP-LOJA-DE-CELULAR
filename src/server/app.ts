@@ -15,6 +15,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { Database } from "./db";
 import { PosService } from "./pos";
+import { RepairService } from "./repairs";
 import {
   InventoryService,
   validate,
@@ -58,6 +59,7 @@ class ApiController {
     @Inject(Database) private db: Database,
     @Inject(InventoryService) private inventory: InventoryService,
     @Inject(PosService) private pos: PosService,
+    @Inject(RepairService) private repairs: RepairService,
   ) {}
   @All("{*path}")
   async handle(@Req() req: Request, @Res() res: Response) {
@@ -217,6 +219,59 @@ class ApiController {
       );
       res.clearCookie("invictus_session", cookieOptions());
       return { ok: true };
+    }
+    if (path === "/repairs/technicians" && method === "GET")
+      return this.repairs.technicians(i, String(req.query.branch_id || ""));
+    if (path === "/repairs/customers" && method === "GET")
+      return this.repairs.customers(i, String(req.query.q || ""));
+    if (path === "/repairs" && method === "GET")
+      return this.repairs.list(
+        i,
+        String(req.query.branch_id || ""),
+        String(req.query.q || ""),
+        String(req.query.status || ""),
+        validate(
+          z.coerce.number().int().min(1).max(100000),
+          req.query.page || 1,
+        ),
+      );
+    if (path === "/repairs" && method === "POST")
+      return this.repairs.create(i, body, key);
+    const repair = path.match(/^\/repairs\/([\w-]+)$/);
+    if (repair && method === "GET") return this.repairs.detail(i, repair[1]);
+    const repairAction = path.match(
+      /^\/repairs\/([\w-]+)\/(info|diagnosis|quote|approval|parts|work|cancel|delivery|photos)$/,
+    );
+    if (repairAction && method === "POST") {
+      const id = repairAction[1];
+      switch (repairAction[2]) {
+        case "info":
+          return this.repairs.info(i, id, body, key);
+        case "diagnosis":
+          return this.repairs.diagnose(i, id, body, key);
+        case "quote":
+          return this.repairs.quote(i, id, body, key);
+        case "approval":
+          return this.repairs.approve(i, id, body, key);
+        case "parts":
+          return this.repairs.part(i, id, body, key);
+        case "work":
+          return this.repairs.work(i, id, body, key);
+        case "cancel":
+          return this.repairs.cancel(i, id, body, key);
+        case "delivery":
+          return this.repairs.deliver(i, id, body, key);
+        case "photos":
+          return this.repairs.addPhoto(i, id, body, key);
+      }
+    }
+    const repairPhoto = path.match(/^\/repairs\/([\w-]+)\/photos\/([\w-]+)$/);
+    if (repairPhoto && method === "GET") {
+      const bytes = await this.repairs.photo(i, repairPhoto[1], repairPhoto[2]);
+      res.type("image/jpeg");
+      res.setHeader("Content-Length", bytes.length);
+      res.send(bytes);
+      return;
     }
     if (path === "/pos/state" && method === "GET")
       return this.pos.state(
@@ -404,7 +459,13 @@ class ApiController {
               .max(254)
               .transform((v) => v.toLowerCase()),
             password: z.string().min(12).max(128),
-            role: z.enum(["manager", "stock", "viewer", "cashier"]),
+            role: z.enum([
+              "manager",
+              "stock",
+              "viewer",
+              "cashier",
+              "technician",
+            ]),
             branch_ids: z.array(uuid).min(1).max(100),
           })
           .strict(),
@@ -438,6 +499,10 @@ export async function createApp(db: Database) {
         provide: PosService,
         useValue: new PosService(db, new InventoryService(db)),
       },
+      {
+        provide: RepairService,
+        useValue: new RepairService(db, new InventoryService(db)),
+      },
     ],
   })
   class AppModule {}
@@ -446,7 +511,18 @@ export async function createApp(db: Database) {
     bodyParser: false,
   });
   const express = await import("express");
-  app.use(express.json({ limit: "128kb" }));
+  const normalJson = express.json({ limit: "128kb" }),
+    photoJson = express.json({ limit: "8mb" });
+  app.use(
+    (req: Request, res: Response, next: import("express").NextFunction) => {
+      const parser =
+        req.method === "POST" &&
+        /^\/api\/repairs\/[\w-]+\/photos$/.test(req.path)
+          ? photoJson
+          : normalJson;
+      parser(req, res, next);
+    },
+  );
   app.use(cookieParser());
   return app;
 }

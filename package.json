@@ -1,6 +1,6 @@
 {
   "name": "invictus-erp-mobile",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "tsc -p tsconfig.server.json && node dist/scripts/dev.js",
@@ -30,6 +30,7 @@
     "react-dom": "^19.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "sharp": "0.35.5",
     "zod": "^4.1.0"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 e 2
+# Arquitetura — módulos 1 a 3
 
 ## Componentes
 
@@ -41,7 +41,7 @@ Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, sem antecipar módulo
 
 1. Produtos e Estoque — implementado nesta etapa.
 2. PDV — implementado: vendas, caixa, pagamentos, devoluções, comprovantes e relatórios por operador. Clientes e financeiro avançado serão conectados nas etapas 4 e 5.
-3. Assistência Técnica — futuro; estoque, clientes, técnicos e financeiro.
+3. Assistência Técnica — implementado: ordens, diagnóstico, fotos privadas, orçamentos, aprovação manual, peças, custos, entrega e garantia. Recebimentos aguardam integração financeira.
 4. CRM — futuro; cadastro e históricos comerciais.
 5. Financeiro — futuro; títulos, liquidações e resultados.
 6. Crediário — futuro; PDV, clientes e financeiro.
@@ -63,3 +63,13 @@ Cancelamentos e devoluções preservam a venda original. Quantidades e valores j
 Movimentos de estoque ligados ao PDV não podem ser estornados pelo endpoint genérico de estoque. Aparelhos vendidos retornam pelo fluxo de devolução para manter a coerência dos pagamentos. O papel de runtime não pode alterar ou excluir pagamentos, devoluções, itens ou lançamentos de dinheiro já registrados.
 
 Relatórios são limitados pela empresa e filial. Operadores de caixa consultam suas próprias vendas e sessões; proprietário e gerente podem supervisionar a filial autorizada. O relatório básico por operador não substitui o futuro Módulo 8 de relatórios gerenciais.
+
+## Ordens de serviço
+
+As ordens preservam os dados recebidos do cliente e do aparelho. O cadastro mínimo compartilhado de clientes será reutilizado no CRM. Técnicos acessam somente suas ordens nas filiais autorizadas; custos e margens são restritos à gestão. Orçamentos e decisões do cliente são registros imutáveis. Mudanças de estado usam versão, bloqueio de linha e idempotência para impedir duplicação e sobrescrita por telas desatualizadas.
+
+Peças movimentam o mesmo ledger do estoque em uma transação com a ordem. Consumo respeita o orçamento aprovado; devolução referencia o consumo original e seu custo. O estorno genérico de estoque recusa esses lançamentos. A conclusão exige relatório; devolver peças após concluir exige nova conclusão. Entrega encerra as escritas e inicia a garantia aprovada. Ordens recusadas ou canceladas permanecem aguardando retirada física, sem cobrança de reparo.
+
+Fotos são bytes privados no banco, protegidos pelas mesmas verificações de empresa, filial e técnico. Aceitam JPEG, PNG e WebP de até 5 MB e 20 megapixels. O servidor remove metadados, corrige orientação e limita a imagem a 1600 pixels e 1,5 MB em JPEG. Cada ordem aceita até 12 fotos. O backup inclui as imagens; não há bucket público ou integração com armazenamento de objetos nesta versão.
+
+O preço final usa a mão de obra aprovada e peças líquidas efetivamente consumidas. Custos de mão de obra e peças permitem acompanhamento operacional, sem substituir custeio contábil ou DRE. O comprovante de entrega não é recibo de pagamento nem documento fiscal.
