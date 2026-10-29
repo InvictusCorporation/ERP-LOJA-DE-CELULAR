@@ -113,6 +113,12 @@ test("migração financeira importa pagamentos, devoluções e serviço legado c
         "utf8",
       ),
     );
+    await db.exec(
+      await readFile(
+        resolve("prisma/migrations/202610290009_store_credit/migration.sql"),
+        "utf8",
+      ),
+    );
     const entries = (
       await db.query<any>(
         "SELECT id,amount_cents,account_id,source_kind FROM finance_entries",

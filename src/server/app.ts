@@ -18,6 +18,7 @@ import { PosService } from "./pos";
 import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
 import { FinanceService } from "./finance";
+import { CreditService } from "./credit";
 import {
   InventoryService,
   validate,
@@ -64,6 +65,7 @@ class ApiController {
     @Inject(RepairService) private repairs: RepairService,
     @Inject(CrmService) private crm: CrmService,
     @Inject(FinanceService) private finance: FinanceService,
+    @Inject(CreditService) private credit: CreditService,
   ) {}
   @All("{*path}")
   async handle(@Req() req: Request, @Res() res: Response) {
@@ -223,6 +225,70 @@ class ApiController {
       );
       res.clearCookie("invictus_session", cookieOptions());
       return { ok: true };
+    }
+    const creditBranch = String(req.query.branch_id || "");
+    const creditPage = () =>
+      validate(z.coerce.number().int().min(1).max(100000), req.query.page || 1);
+    if (path === "/credit/settings" && method === "GET")
+      return this.credit.settings(i);
+    if (path === "/credit/settings" && method === "POST")
+      return this.credit.saveSettings(i, body, key);
+    if (path === "/credit/simulate" && method === "POST")
+      return this.credit.simulate(i, body);
+    if (path === "/credit/profiles" && method === "GET")
+      return this.credit.profiles(
+        i,
+        creditBranch,
+        String(req.query.q || ""),
+        creditPage(),
+      );
+    if (path === "/credit/profiles" && method === "POST")
+      return this.credit.saveProfile(i, null, body, key);
+    if (path === "/credit/offers" && method === "GET")
+      return this.credit.offers(i, creditBranch, creditPage());
+    if (path === "/credit/offers" && method === "POST")
+      return this.credit.offer(i, body, key);
+    if (path === "/credit/checkout" && method === "GET")
+      return this.credit.checkoutOffers(
+        i,
+        creditBranch,
+        String(req.query.q || ""),
+      );
+    if (path === "/credit/contracts" && method === "GET")
+      return this.credit.list(
+        i,
+        creditBranch,
+        String(req.query.q || ""),
+        creditPage(),
+        String(req.query.status || "all"),
+      );
+    if (path === "/credit/collections" && method === "GET")
+      return this.credit.collections(i, creditBranch, creditPage());
+    const creditRecord = path.match(
+      /^\/credit\/(profiles|offers|contracts)\/([\w-]+)(?:\/(cancel|receive|reverse|renegotiate|document))?$/,
+    );
+    if (creditRecord) {
+      const [, type, id, action] = creditRecord;
+      if (type === "offers" && action === "document" && method === "GET")
+        return this.credit.offerDocument(i, id);
+      if (method === "GET" && type === "profiles" && !action)
+        return this.credit.profileDetail(i, id);
+      if (method === "GET" && type === "contracts" && !action)
+        return this.credit.detail(i, id);
+      if (method === "GET" && type === "contracts" && action === "document")
+        return this.credit.document(i, id);
+      if (method === "POST") {
+        if (type === "profiles" && !action)
+          return this.credit.saveProfile(i, id, body, key);
+        if (type === "offers" && action === "cancel")
+          return this.credit.cancelOffer(i, id, body, key);
+        if (type === "contracts" && action === "receive")
+          return this.credit.receive(i, id, body, key);
+        if (type === "contracts" && action === "reverse")
+          return this.credit.reverseReceipt(i, id, body, key);
+        if (type === "contracts" && action === "renegotiate")
+          return this.credit.renegotiate(i, id, body, key);
+      }
     }
     const financeBranch = String(req.query.branch_id || "");
     const financeStart = String(req.query.start || "");
@@ -627,6 +693,10 @@ export async function createApp(db: Database) {
   @Module({
     controllers: [ApiController],
     providers: [
+      {
+        provide: CreditService,
+        useValue: new CreditService(db, new InventoryService(db)),
+      },
       {
         provide: FinanceService,
         useValue: new FinanceService(db, new InventoryService(db)),

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { toCents, formatCents } from "../shared/money";
 import "./pos.css";
+import CreditDocument from "./credit-document";
 
 type Row = Record<string, any>;
 type CartLine = {
@@ -146,7 +147,7 @@ function DownloadReceipt({ receipt }: { receipt: Row }) {
       r.sale.branch_name,
       "COMPROVANTE NÃO FISCAL",
       r.sale.receipt_code,
-      ...(r.sale.customer_name ? ['Cliente: '+r.sale.customer_name] : []),
+      ...(r.sale.customer_name ? ["Cliente: " + r.sale.customer_name] : []),
       when(r.sale.created_at),
       `Operador: ${r.sale.operator_name}`,
       `Situação: ${statusNames[r.sale.status]}`,
@@ -163,6 +164,17 @@ function DownloadReceipt({ receipt }: { receipt: Row }) {
           `${methodNames[p.method]}: recebido ${formatCents(p.tendered_cents)} · referência ${p.reference || "—"}`,
       ),
       `Troco: ${formatCents(r.sale.change_cents)}`,
+      ...(r.credit
+        ? [
+            `Crediário: ${r.credit.code} · Situação: ${r.credit.status}`,
+            `Principal financiado: ${formatCents(r.credit.simulation.principal_cents)} · Juros previstos: ${formatCents(r.credit.simulation.interest_cents)}`,
+            ...r.credit.simulation.lines.map(
+              (l: Row) =>
+                `Parcela ${l.number} · ${l.due_on} · ${formatCents(l.amount_cents)}`,
+            ),
+            "Condições e revisões constam no contrato. Este comprovante não declara quitação das parcelas.",
+          ]
+        : []),
       ...r.returns.map(
         (x: Row) =>
           `${x.kind === "cancel" ? "Cancelamento" : "Devolução"} ${when(x.created_at)}: ${formatCents(x.total_cents)} · ${x.reason}`,
@@ -203,6 +215,11 @@ export default function PosPanel({
   onNotice,
 }: Props) {
   const can = (p: string) => permissions.includes(p);
+  const [creditMode, setCreditMode] = useState(false);
+  const [creditQuery, setCreditQuery] = useState("");
+  const [creditOffers, setCreditOffers] = useState<Row[]>([]);
+  const [selectedCredit, setSelectedCredit] = useState<Row | null>(null);
+  const [creditDocument, setCreditDocument] = useState<Row | null>(null);
   const [customerQuery, setCustomerQuery] = useState(""),
     [customerMatches, setCustomerMatches] = useState<Row[]>([]),
     [saleCustomer, setSaleCustomer] = useState<Row | null>(null);
@@ -228,6 +245,25 @@ export default function PosPanel({
   const busyRef = useRef(false),
     loadId = useRef(0);
   const scanRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (dialog !== "checkout" || !creditMode) return;
+    let alive = true;
+    const timer = setTimeout(() => {
+      get(
+        `/credit/checkout?branch_id=${branch}&q=${encodeURIComponent(creditQuery)}`,
+      )
+        .then((r) => {
+          if (alive) setCreditOffers(r.items);
+        })
+        .catch((e) => {
+          if (alive) onNotice(e.message, true);
+        });
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [dialog, creditMode, creditQuery, branch]);
   useEffect(() => {
     let alive = true;
     const timer = setTimeout(() => {
@@ -423,19 +459,24 @@ export default function PosPanel({
       onNotice(e.message, true);
     }
   };
-  const returnTotal = receipt
-    ? receipt.items.reduce((n: number, l: Row) => {
-        const qty = quantities[l.id] || 0;
-        return (
-          n +
-          Number(
-            (BigInt(l.net_cents) * BigInt(l.returned_quantity + qty)) /
-              BigInt(l.quantity),
-          ) -
-          l.refunded_cents
-        );
-      }, 0)
-    : 0;
+  const returnTotal = receipt?.credit
+    ? receipt.payments.reduce(
+        (n: number, p: Row) => n + Number(p.amount_cents),
+        0,
+      )
+    : receipt
+      ? receipt.items.reduce((n: number, l: Row) => {
+          const qty = quantities[l.id] || 0;
+          return (
+            n +
+            Number(
+              (BigInt(l.net_cents) * BigInt(l.returned_quantity + qty)) /
+                BigInt(l.quantity),
+            ) -
+            l.refunded_cents
+          );
+        }, 0)
+      : 0;
   const allocateRefund = (target: number) => {
     let remaining = target;
     return receipt!.payments.map((p: Row) => {
@@ -469,6 +510,9 @@ export default function PosPanel({
       setPayments([
         { method: "cash", amount: decimal(subtotal - d), reference: "" },
       ]);
+      setCreditMode(false);
+      setSelectedCredit(null);
+      setCreditQuery("");
       setDialog("checkout");
     } catch (e: any) {
       onNotice(e.message, true);
@@ -512,9 +556,20 @@ export default function PosPanel({
         );
       }
       if (dialog === "checkout") {
+        if (creditMode && !selectedCredit)
+          throw new Error("Selecione uma oferta aprovada.");
         const r = await mutate("/pos/sales", {
           session_id: state.session.id,
           ...(saleCustomer ? { customer_id: saleCustomer.id } : {}),
+          ...(creditMode && selectedCredit
+            ? {
+                credit_offer_id: selectedCredit.id,
+                expected_credit_total_cents:
+                  selectedCredit.simulation.total_cents,
+                credit_acceptance_reference: value("credit_acceptance"),
+                credit_terms_accepted: form.get("credit_terms") === "on",
+              }
+            : {}),
           items: cart.map((l) => ({
             product_id: l.product_id,
             quantity: l.quantity,
@@ -540,6 +595,14 @@ export default function PosPanel({
         await mutate(`/pos/sales/${receipt!.sale.id}/return`, {
           session_id: state.session.id,
           kind: dialog,
+          ...(receipt!.credit
+            ? {
+                credit_refund_confirmed: form.get("credit_refund") === "on",
+                expected_credit_refund_cents: Number(
+                  receipt!.credit.received_cents,
+                ),
+              }
+            : {}),
           items: receipt!.items
             .filter((l: Row) => (quantities[l.id] || 0) > 0)
             .map((l: Row) => ({
@@ -1242,8 +1305,8 @@ export default function PosPanel({
         <ReceiptText size={18} />
         <span>
           Comprovante não fiscal. Pix e cartões são registrados após conferência
-          externa. Integração fiscal, TEF, crediário e gestão financeira
-          avançada pertencem às etapas correspondentes.
+          externa. O crediário exige oferta previamente aprovada. Integração
+          fiscal e TEF pertencem às etapas correspondentes.
         </span>
       </div>
       {unitProduct && (
@@ -1278,7 +1341,13 @@ export default function PosPanel({
           </div>
         </DialogBox>
       )}
-      {receipt && !dialog && (
+      {creditDocument && (
+        <CreditDocument
+          data={creditDocument}
+          onClose={() => setCreditDocument(null)}
+        />
+      )}
+      {receipt && !dialog && !creditDocument && (
         <DialogBox
           title="Comprovante de venda"
           onClose={() => setReceipt(null)}
@@ -1358,6 +1427,24 @@ export default function PosPanel({
                 </small>
               </div>
             ))}
+            {receipt.credit && (
+              <div className="info-strip">
+                <span>
+                  Crediário {receipt.credit.code}: principal financiado{" "}
+                  {formatCents(receipt.credit.simulation.principal_cents)}.
+                  Entrada{" "}
+                  {formatCents(
+                    receipt.payments.reduce(
+                      (n: number, p: Row) => n + Number(p.amount_cents),
+                      0,
+                    ),
+                  )}
+                  . Parcelas recebidas{" "}
+                  {formatCents(receipt.credit.received_cents)}. Consulte o
+                  contrato para calendário e condições.
+                </span>
+              </div>
+            )}
             <p className="form-hint">
               Pagamentos externos registrados manualmente. Este comprovante não
               substitui documento fiscal. {receipt.sale.note}
@@ -1365,17 +1452,37 @@ export default function PosPanel({
           </div>
           <div className="modal-footer pos-receipt-actions no-print">
             <DownloadReceipt receipt={receipt} />
+            {receipt.credit && (
+              <button
+                className="secondary"
+                onClick={async () => {
+                  try {
+                    setCreditDocument(
+                      await get(
+                        `/credit/contracts/${receipt.credit.id}/document`,
+                      ),
+                    );
+                  } catch (e: any) {
+                    onNotice(e.message, true);
+                  }
+                }}
+              >
+                Contrato do crediário
+              </button>
+            )}
             {can("pos_refund") &&
               receipt.sale.status !== "returned" &&
               receipt.sale.status !== "cancelled" && (
                 <>
-                  <button
-                    className="secondary"
-                    disabled={!session?.own}
-                    onClick={() => beginReturn("return")}
-                  >
-                    Devolver itens
-                  </button>
+                  {!receipt.credit && (
+                    <button
+                      className="secondary"
+                      disabled={!session?.own}
+                      onClick={() => beginReturn("return")}
+                    >
+                      Devolver itens
+                    </button>
+                  )}
                   {receipt.sale.status === "completed" && (
                     <button
                       className="secondary"
@@ -1489,50 +1596,209 @@ export default function PosPanel({
               )}
               {dialog === "checkout" && (
                 <>
-                  <Field label="Cliente da venda (opcional)">
-                    <input
-                      placeholder="Buscar nome ou telefone"
-                      value={customerQuery}
-                      onChange={(e) => {
-                        setCustomerQuery(e.target.value);
-                        setSaleCustomer(null);
-                      }}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  {saleCustomer ? (
-                    <p className="form-hint">
-                      Cliente selecionado: <strong>{saleCustomer.name}</strong>{" "}
-                      <button
-                        type="button"
-                        className="btn secondary small"
-                        onClick={() => {
+                  {can("credit_sell") && (
+                    <Field label="Condição de venda">
+                      <select
+                        value={creditMode ? "credit" : "cash"}
+                        onChange={(e) => {
+                          setCreditMode(e.target.value === "credit");
+                          setSelectedCredit(null);
                           setSaleCustomer(null);
                           setCustomerQuery("");
+                          setPayments(
+                            e.target.value === "credit"
+                              ? []
+                              : [
+                                  {
+                                    method: "cash",
+                                    amount: decimal(total),
+                                    reference: "",
+                                  },
+                                ],
+                          );
                         }}
                       >
-                        Remover
-                      </button>
-                    </p>
-                  ) : (
-                    <div className="crm-matches">
-                      {customerMatches.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setSaleCustomer(c);
-                            setCustomerQuery("");
-                            setCustomerMatches([]);
+                        <option value="cash">À vista / cartões</option>
+                        <option value="credit">Crediário aprovado</option>
+                      </select>
+                    </Field>
+                  )}
+                  {creditMode ? (
+                    <>
+                      <Field label="Buscar oferta por cliente">
+                        <input
+                          value={creditQuery}
+                          onChange={(e) => setCreditQuery(e.target.value)}
+                        />
+                      </Field>
+                      <Field label="Oferta aprovada">
+                        <select
+                          required
+                          value={selectedCredit?.id || ""}
+                          onChange={(e) => {
+                            const o =
+                              creditOffers.find(
+                                (o) => o.id === e.target.value,
+                              ) || null;
+                            setSelectedCredit(o);
+                            setSaleCustomer(
+                              o
+                                ? { id: o.customer_id, name: o.customer_name }
+                                : null,
+                            );
+                            setPayments(
+                              o && Number(o.down_cents) > 0
+                                ? [
+                                    {
+                                      method: "cash",
+                                      amount: decimal(Number(o.down_cents)),
+                                      reference: "",
+                                    },
+                                  ]
+                                : [],
+                            );
                           }}
                         >
-                          {c.name} · Telefone final {c.phone_suffix}
-                        </button>
-                      ))}
-                    </div>
+                          <option value="">Selecione uma oferta</option>
+                          {creditOffers
+                            .filter((o) => Number(o.purchase_cents) === total)
+                            .map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.code} · {o.customer_name} · Entrada{" "}
+                                {formatCents(o.down_cents)}
+                              </option>
+                            ))}
+                        </select>
+                      </Field>
+                      <p className="form-hint">
+                        São exibidas ofertas desta filial com o mesmo valor do
+                        carrinho.
+                      </p>
+                      {selectedCredit && (
+                        <>
+                          <p>
+                            Cliente:{" "}
+                            <strong>{selectedCredit.customer_name}</strong>.
+                            Principal{" "}
+                            {formatCents(
+                              selectedCredit.simulation.principal_cents,
+                            )}{" "}
+                            · Juros{" "}
+                            {formatCents(
+                              selectedCredit.simulation.interest_cents,
+                            )}{" "}
+                            · Total com financiamento{" "}
+                            {formatCents(selectedCredit.simulation.total_cents)}
+                            .
+                          </p>
+                          <p>
+                            CET mensal{" "}
+                            {Number(
+                              selectedCredit.simulation
+                                .effective_monthly_percent,
+                            ).toFixed(4)}
+                            % · CET anual{" "}
+                            {Number(
+                              selectedCredit.simulation.annual_percent,
+                            ).toFixed(4)}
+                            %.
+                          </p>
+                          <div className="table-scroll">
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>Parcela</th>
+                                  <th>Vencimento</th>
+                                  <th>Valor</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedCredit.simulation.lines.map(
+                                  (l: Row) => (
+                                    <tr key={l.number}>
+                                      <td>{l.number}</td>
+                                      <td>{l.due_on}</td>
+                                      <td>{formatCents(l.amount_cents)}</td>
+                                    </tr>
+                                  ),
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                          <Field label="Referência do aceite do contrato">
+                            <input
+                              name="credit_acceptance"
+                              required
+                              minLength={3}
+                              maxLength={300}
+                            />
+                          </Field>
+                          <label className="finance-checkbox">
+                            <input
+                              type="checkbox"
+                              name="credit_terms"
+                              required
+                            />{" "}
+                            Conferi as condições com o comprador e registrei o
+                            aceite e a entrega da cópia do contrato.
+                          </label>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Field label="Cliente da venda (opcional)">
+                        <input
+                          placeholder="Buscar nome ou telefone"
+                          value={customerQuery}
+                          onChange={(e) => {
+                            setCustomerQuery(e.target.value);
+                            setSaleCustomer(null);
+                          }}
+                          autoComplete="off"
+                        />
+                      </Field>
+                      {saleCustomer ? (
+                        <p className="form-hint">
+                          Cliente selecionado:{" "}
+                          <strong>{saleCustomer.name}</strong>{" "}
+                          <button
+                            type="button"
+                            className="btn secondary small"
+                            onClick={() => {
+                              setSaleCustomer(null);
+                              setCustomerQuery("");
+                            }}
+                          >
+                            Remover
+                          </button>
+                        </p>
+                      ) : (
+                        <div className="crm-matches">
+                          {customerMatches.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setSaleCustomer(c);
+                                setCustomerQuery("");
+                                setCustomerMatches([]);
+                              }}
+                            >
+                              {c.name} · Telefone final {c.phone_suffix}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                   <p className="pos-total-banner">
-                    Total a receber<strong>{formatCents(total)}</strong>
+                    {creditMode ? "Entrada a receber" : "Total a receber"}
+                    <strong>
+                      {formatCents(
+                        creditMode ? selectedCredit?.down_cents || 0 : total,
+                      )}
+                    </strong>
                   </p>
                   <p className="form-hint">
                     Confira Pix/cartão no aplicativo ou terminal externo antes
@@ -1551,7 +1817,10 @@ export default function PosPanel({
                               payments.reduce(
                                 (n, p) => n + amountOf(p.amount),
                                 0,
-                              ) - total,
+                              ) -
+                                (creditMode
+                                  ? Number(selectedCredit?.down_cents || 0)
+                                  : total),
                             ),
                           );
                         } catch {
@@ -1611,6 +1880,22 @@ export default function PosPanel({
                     Distribuir conforme pagamentos originais
                   </button>
                   {paymentFields(true)}
+                  {receipt.credit && (
+                    <>
+                      <p className="form-hint">
+                        O cancelamento integral devolve todos os itens e cancela
+                        o contrato. Para manter parte dos produtos, registre uma
+                        nova venda após o cancelamento.
+                      </p>
+                      <label className="finance-checkbox">
+                        <input name="credit_refund" type="checkbox" required />{" "}
+                        Confirmei o reembolso da entrada acima e das parcelas já
+                        recebidas: {formatCents(receipt.credit.received_cents)}.
+                        O estorno das parcelas ocorrerá nas contas financeiras
+                        originais.
+                      </label>
+                    </>
+                  )}
                   <Field label="Motivo da devolução ou cancelamento">
                     <textarea
                       name="reason"
