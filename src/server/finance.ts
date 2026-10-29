@@ -48,7 +48,7 @@ const today = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-const paidSql = `(t.opening_paid_cents+coalesce((SELECT sum(s.amount_cents) FROM finance_settlements s JOIN finance_entries e ON e.settlement_id=s.id AND e.source_kind='settlement' WHERE s.title_id=t.id AND NOT EXISTS(SELECT 1 FROM finance_entries r WHERE r.reverses_entry_id=e.id)),0))`;
+const paidSql = `(t.opening_paid_cents+coalesce((SELECT sum(s.amount_cents+s.discount_cents-s.charges_cents) FROM finance_settlements s JOIN finance_entries e ON e.settlement_id=s.id AND e.source_kind='settlement' WHERE s.title_id=t.id AND NOT EXISTS(SELECT 1 FROM finance_entries r WHERE r.reverses_entry_id=e.id)),0))`;
 const activeRec = `LEFT JOIN finance_reconciliations rec ON rec.entry_id=e.id AND rec.voided_at IS NULL`;
 const effectiveAccount = "coalesce(e.account_id,rec.account_id)";
 function number(value: unknown) {
@@ -374,6 +374,8 @@ export class FinanceService {
       { action: "finance.title.update", id, b },
       async (tx) => {
         const t = await this.title(tx, i, id, b.version);
+        if (t.credit_installment_id)
+          fail(409, "Altere as condições da parcela pelo crediário.");
         if (t.cancelled || t.paid_cents)
           fail(
             409,
@@ -580,6 +582,11 @@ export class FinanceService {
             409,
             "Confira o saldo anterior deste serviço antes de registrar a baixa.",
           );
+        if (t.credit_installment_id)
+          fail(
+            409,
+            "Receba parcelas pelo crediário para aplicar abatimentos e encargos corretamente.",
+          );
         if (t.cancelled || b.amount_cents > t.amount_cents - t.paid_cents)
           fail(409, "Baixa acima do saldo aberto ou título cancelado.");
         const a = await this.account(tx, i, b.account_id);
@@ -649,6 +656,8 @@ export class FinanceService {
         );
         if (!s) fail(404, "Baixa não encontrada.");
         const t = await this.title(tx, i, s.title_id, b.version);
+        if (t.credit_installment_id)
+          fail(409, "Estorne este recebimento pelo crediário.");
         const [e] = await tx.query(
           "SELECT *,posted_on::text AS posted_on FROM finance_entries WHERE settlement_id=$1 AND source_kind='settlement'",
           [id],
@@ -961,6 +970,136 @@ export class FinanceService {
       };
     });
   }
+  async creditSettlement(
+    tx: Tx,
+    i: Identity,
+    titleId: string,
+    accountId: string,
+    amount: number,
+    discount: number,
+    charges: number,
+    reference: string,
+  ) {
+    permit(i, "finance_manage");
+    const t = await this.title(tx, i, titleId);
+    if (!t.credit_installment_id || t.cancelled)
+      fail(409, "Parcela indisponível no financeiro.");
+    const reduction = amount + discount - charges;
+    if (reduction < 0 || reduction > t.amount_cents - t.paid_cents)
+      fail(409, "Recebimento excede o saldo nominal.");
+    const a = await this.account(tx, i, accountId);
+    if (a.branch_id !== t.branch_id)
+      fail(400, "Escolha uma conta da filial da parcela.");
+    const id = randomUUID();
+    await tx.query(
+      "INSERT INTO finance_settlements(id,tenant_id,branch_id,title_id,amount_cents,reference,created_by,discount_cents,charges_cents) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id",
+      [
+        id,
+        i.tenant_id,
+        t.branch_id,
+        t.id,
+        amount,
+        reference,
+        i.user_id,
+        discount,
+        charges,
+      ],
+    );
+    const entry = await this.entry(
+      tx,
+      i,
+      t.branch_id,
+      a.id,
+      amount,
+      today(),
+      t.description,
+      "settlement",
+      id,
+      id,
+    );
+    await tx.query(
+      "UPDATE finance_titles SET version=version+1 WHERE id=$1 RETURNING id",
+      [t.id],
+    );
+    await this.event(
+      tx,
+      i,
+      t.id,
+      "settled",
+      {
+        amount_cents: amount,
+        discount_cents: discount,
+        charges_cents: charges,
+        reference,
+      },
+      t.branch_id,
+    );
+    return { id, entry_id: entry };
+  }
+  async reverseCredit(tx: Tx, i: Identity, id: string, reason: string) {
+    permit(i, "finance_manage");
+    const [s] = await tx.query(
+      "SELECT * FROM finance_settlements WHERE id=$1",
+      [id],
+    );
+    if (!s) fail(404, "Recebimento não encontrado.");
+    const t = await this.title(tx, i, s.title_id);
+    if (!t.credit_installment_id)
+      fail(400, "Recebimento não pertence ao crediário.");
+    const [e] = await tx.query(
+      "SELECT * FROM finance_entries WHERE settlement_id=$1 AND source_kind='settlement'",
+      [id],
+    );
+    await this.lockEntry(tx, i, e.id);
+    if (
+      (
+        await tx.query(
+          "SELECT id FROM finance_entries WHERE reverses_entry_id=$1",
+          [e.id],
+        )
+      ).length
+    )
+      fail(409, "Recebimento já estornado.");
+    if (
+      (
+        await tx.query(
+          "SELECT id FROM finance_reconciliations WHERE entry_id=$1 AND voided_at IS NULL",
+          [e.id],
+        )
+      ).length
+    )
+      fail(
+        409,
+        "Desfaça a conciliação do recebimento antes de estornar ou cancelar.",
+      );
+    await this.account(tx, i, e.account_id, false);
+    const reversal = await this.entry(
+      tx,
+      i,
+      t.branch_id,
+      e.account_id,
+      -e.amount_cents,
+      today(),
+      "Estorno: " + e.description,
+      "settlement_reversal",
+      id,
+      id,
+      e.id,
+    );
+    await tx.query(
+      "UPDATE finance_titles SET version=version+1 WHERE id=$1 RETURNING id",
+      [t.id],
+    );
+    await this.event(
+      tx,
+      i,
+      t.id,
+      "settlement_reversed",
+      { reason, entry_id: reversal },
+      t.branch_id,
+    );
+    return { id: reversal };
+  }
   async reports(i: Identity, branch: string, start: string, end: string) {
     const ids = this.scope(i, branch);
     this.period(start, end);
@@ -973,6 +1112,7 @@ export class FinanceService {
  UNION ALL SELECT r.branch_id,'goods_cost',-x.quantity::bigint*p.unit_cost_cents,(r.created_at AT TIME ZONE 'America/Fortaleza')::date FROM pos_returns r JOIN pos_return_items x ON x.return_id=r.id JOIN pos_sale_items p ON p.id=x.sale_item_id
  UNION ALL SELECT o.branch_id,'services',q.labor_price_cents+coalesce(p.price,0),(o.delivered_at AT TIME ZONE 'America/Fortaleza')::date FROM repair_orders o JOIN repair_quotes q ON q.id=o.current_quote_id LEFT JOIN parts p ON p.order_id=o.id WHERE o.status='delivered' AND o.delivery_outcome='ready'
  UNION ALL SELECT o.branch_id,'service_cost',q.labor_cost_cents+coalesce(p.cost,0),(o.delivered_at AT TIME ZONE 'America/Fortaleza')::date FROM repair_orders o JOIN repair_quotes q ON q.id=o.current_quote_id LEFT JOIN parts p ON p.order_id=o.id WHERE o.status='delivered' AND o.delivery_outcome='ready'
+ UNION ALL SELECT branch_id,'credit_income',amount_cents::bigint,competence_on FROM credit_income_events
  UNION ALL SELECT branch_id,CASE WHEN direction='receivable' THEN 'manual_income' ELSE 'expenses' END,amount_cents::bigint,competence_on FROM finance_titles WHERE source_kind='manual' AND affects_result AND NOT cancelled
  ) SELECT branch_id,category,sum(amount)::text AS amount FROM facts WHERE branch_id=ANY($1::uuid[]) AND day BETWEEN $2::date AND $3::date GROUP BY branch_id,category`,
         [ids, start, end],
@@ -989,11 +1129,14 @@ export class FinanceService {
           services: 0,
           service_cost: 0,
           manual_income: 0,
+          credit_income: 0,
           expenses: 0,
         };
         for (const f of rows)
           r[f.category] = number(r[f.category] + number(f.amount));
-        r.revenue = number(r.sales + r.returns + r.services + r.manual_income);
+        r.revenue = number(
+          r.sales + r.returns + r.services + r.manual_income + r.credit_income,
+        );
         r.gross = number(r.revenue - r.goods_cost - r.service_cost);
         r.result = number(r.gross - r.expenses);
         r.margin = r.revenue > 0 ? (r.result / r.revenue) * 100 : null;

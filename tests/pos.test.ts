@@ -72,7 +72,7 @@ test("atualiza banco do Módulo 1 sem apagar dados e aplica migrações uma úni
           "SELECT count(*)::int AS n FROM _invictus_migrations",
         )
       )[0].n,
-      8,
+      9,
     );
     assert.equal(
       (await db.system<any>("SELECT count(*)::int AS n FROM pos_registers"))[0]

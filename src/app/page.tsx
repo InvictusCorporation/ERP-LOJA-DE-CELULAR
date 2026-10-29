@@ -44,6 +44,7 @@ import PosPanel from "./pos-panel";
 import RepairsPanel from "./repairs-panel";
 import CrmPanel from "./crm-panel";
 import FinancePanel from "./finance-panel";
+import CreditPanel from "./credit-panel";
 
 type Row = Record<string, any>;
 type Me = {
@@ -97,6 +98,7 @@ const nav = [
   { id: "repairs", label: "Assistência técnica", icon: Wrench },
   { id: "crm", label: "CRM e clientes", icon: UsersRound },
   { id: "finance", label: "Gestão financeira", icon: ChartNoAxesCombined },
+  { id: "credit", label: "Crediário próprio", icon: ShieldCheck },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -699,7 +701,8 @@ export default function App() {
                 (n.id !== "pos" || can("pos_read")) &&
                 (n.id !== "repairs" || can("service_read")) &&
                 (n.id !== "crm" || can("crm_read")) &&
-                (n.id !== "finance" || can("finance_read")),
+                (n.id !== "finance" || can("finance_read")) &&
+                (n.id !== "credit" || can("credit_read")),
             )
             .map((n) => (
               <button
@@ -715,8 +718,10 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 a 5 ativos
-            <small>Estoque, PDV, Assistência, CRM e Financeiro</small>
+            <span className="status-dot" /> Módulos 1 a 6 ativos
+            <small>
+              Estoque, PDV, Assistência, CRM, Financeiro e Crediário
+            </small>
           </div>
           <button
             className="profile"
@@ -788,6 +793,8 @@ export default function App() {
                     crm: "Clientes, históricos e próximos passos do atendimento.",
                     finance:
                       "Recebimentos, pagamentos e resultados da sua operação.",
+                    credit:
+                      "Ofertas, contratos, parcelas e análise manual de crédito.",
                     repairs:
                       "Do recebimento à entrega, acompanhe cada etapa do reparo.",
                     products: "Organize seu catálogo e acompanhe cada produto.",
@@ -866,6 +873,17 @@ export default function App() {
                   key={branch}
                   branch={branch}
                   branches={me.branches}
+                  mutate={mutate}
+                  onNotice={show}
+                />
+              )}
+              {view === "credit" && can("credit_read") && (
+                <CreditPanel
+                  key={branch}
+                  branch={branch}
+                  branches={me.branches}
+                  permissions={me.permissions}
+                  companyName={me.tenant.name}
                   mutate={mutate}
                   onNotice={show}
                 />
@@ -1475,7 +1493,7 @@ export default function App() {
                         <dt>Módulos disponíveis</dt>
                         <dd>
                           1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM / 5
-                          · Financeiro
+                          · Financeiro / 6 · Crediário próprio
                         </dd>
                       </dl>
                     </section>

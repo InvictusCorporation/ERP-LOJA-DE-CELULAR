@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 5
+# Arquitetura — módulos 1 a 6
 
 ## Componentes
 
@@ -44,13 +44,21 @@ Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, sem antecipar módulo
 3. Assistência Técnica — implementado: ordens, diagnóstico, fotos privadas, orçamentos, aprovação manual, peças, custos, entrega e garantia, com recebível gerado na entrega do reparo.
 4. CRM — implementado: clientes compartilhados, compras/aparelhos/serviços, prazos de garantia, atividades, funil, responsáveis, lembretes e preferência de contato comercial.
 5. Financeiro — implementado: pagar/receber, baixas e estornos, contas, centros, conciliação manual, fluxo realizado/previsto, DRE gerencial, margens e consolidação por filial.
-6. Crediário — futuro; PDV, clientes e financeiro.
+6. Crediário — implementado: análise manual, limite com reserva de ofertas, venda financiada no PDV, contrato, parcelas, antecipação, recebimentos, estornos, renegociação e acompanhamento de atrasos integrados ao financeiro.
 7. Compras — futuro; estoque e contas a pagar.
 8. Relatórios — futuro; consolidação dos módulos operacionais.
 9. Funcionários e Permissões — futuro; apenas perfis mínimos do estoque nesta etapa.
 10. Filiais — futuro; apenas cadastro básico e saldos separados nesta etapa.
 11. Fiscal — futuro; integração homologada com provedor.
 12. Ponto — futuro; reutilização do projeto existente e contratação independente.
+
+## Crediário próprio
+
+O módulo reutiliza clientes do CRM, venda/estoque do PDV e contas/ledger do financeiro. Perfil contém CPF e avaliação manual; ofertas congelam termos e dados do comprador, reservam principal e têm validade mínima de dois dias. Alteração das condições comerciais exige nova simulação antes de aprovar ou renegociar. Contrato e planos preservam revisões; parcelas, recibos, eventos de resultado e auditoria não admitem UPDATE/DELETE pela role da aplicação. RLS e referências compostas mantêm o isolamento por empresa; a API aplica filial e permissões adicionais. A busca do caixa não devolve CPF ou avaliação; o documento completo exige gestão ou o operador responsável pela venda, com auditoria de acesso.
+
+Valores usam centavos inteiros, arredondamento por razão inteira e vencimentos mensais ancorados no dia original. Juros são simples por principal da parcela e dias/base 30. O CET decorre da taxa interna dos fluxos nas datas previstas. Antecipações abatem juros não decorridos; atraso calcula multa única sobre saldo no vencimento e mora simples sobre principal e dias efetivamente em aberto. Encargos vencidos são pagos primeiro, sem capitalização. Limites técnicos não equivalem a autorização jurídica de taxas.
+
+Na venda a prazo, o caixa recebe somente a entrada; parcelas geram títulos patrimoniais, sem repetir a receita da mercadoria. Recebimentos reutilizam finance_settlements e finance_entries; redução nominal = dinheiro + abatimento − encargos. Juros previstos entram na competência do vencimento; antecipação realoca juros recebidos para a data do recebimento e elimina a parcela abatida. Multa/mora compõem receita quando recebidas. Estornos e renegociações usam eventos compensatórios. Renegociação considera só principal restante e preserva pagamentos; cancelamento integral compensa todos os planos e pagamentos, atomicamente com PDV/estoque, e é bloqueado por conciliação ativa.
 
 ## Transações do PDV
 

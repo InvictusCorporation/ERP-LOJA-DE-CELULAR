@@ -77,6 +77,7 @@ const dreLines: Row = {
   returns: "Devoluções de vendas",
   services: "Serviços entregues",
   manual_income: "Outras receitas",
+  credit_income: "Juros e encargos do crediário",
   revenue: "Receita líquida gerencial",
   goods_cost: "Custo das mercadorias",
   service_cost: "Custo dos serviços",
@@ -1312,7 +1313,8 @@ export default function FinancePanel({
                         Conferir saldo anterior
                       </button>
                     )}
-                  {!detail.title.cancelled &&
+                  {detail.title.source_kind !== "credit" &&
+                    !detail.title.cancelled &&
                     !detail.title.needs_review &&
                     detail.title.paid_cents < detail.title.amount_cents && (
                       <button
@@ -1322,25 +1324,34 @@ export default function FinancePanel({
                         Registrar baixa
                       </button>
                     )}
-                  {!detail.title.cancelled && !detail.title.paid_cents && (
-                    <>
-                      <button
-                        className="btn secondary"
-                        onClick={() => open("title", detail.title)}
-                      >
-                        Editar título
-                      </button>
-                      {detail.title.source_kind === "manual" && (
+                  {detail.title.source_kind !== "credit" &&
+                    !detail.title.cancelled &&
+                    !detail.title.paid_cents && (
+                      <>
                         <button
                           className="btn secondary"
-                          onClick={() => open("cancel", detail.title)}
+                          onClick={() => open("title", detail.title)}
                         >
-                          Cancelar título
+                          Editar título
                         </button>
-                      )}
-                    </>
-                  )}
+                        {detail.title.source_kind === "manual" && (
+                          <button
+                            className="btn secondary"
+                            onClick={() => open("cancel", detail.title)}
+                          >
+                            Cancelar título
+                          </button>
+                        )}
+                      </>
+                    )}
                 </div>
+                {detail.title.source_kind === "credit" && (
+                  <p className="form-hint">
+                    Receba ou estorne esta parcela em Crediário próprio. O
+                    módulo calcula o abatimento de juros, a multa e a mora
+                    conforme o contrato.
+                  </p>
+                )}
                 <h3>Baixas e estornos</h3>
                 {detail.settlements.length ? (
                   <div className="table-scroll">
@@ -1363,6 +1374,16 @@ export default function FinancePanel({
                             </td>
                             <td>
                               {money(s.amount_cents)}
+                              {Number(s.discount_cents) > 0 && (
+                                <small>
+                                  Abatimento de juros: {money(s.discount_cents)}
+                                </small>
+                              )}
+                              {Number(s.charges_cents) > 0 && (
+                                <small>
+                                  Encargos incluídos: {money(s.charges_cents)}
+                                </small>
+                              )}
                               <small>
                                 {s.reversed
                                   ? "Estornada"
@@ -1372,15 +1393,16 @@ export default function FinancePanel({
                               </small>
                             </td>
                             <td>
-                              {!s.reversed && (
-                                <button
-                                  className="btn secondary small"
-                                  disabled={s.reconciled}
-                                  onClick={() => open("reverse", s)}
-                                >
-                                  Estornar baixa
-                                </button>
-                              )}
+                              {detail.title.source_kind !== "credit" &&
+                                !s.reversed && (
+                                  <button
+                                    className="btn secondary small"
+                                    disabled={s.reconciled}
+                                    onClick={() => open("reverse", s)}
+                                  >
+                                    Estornar baixa
+                                  </button>
+                                )}
                             </td>
                           </tr>
                         ))}

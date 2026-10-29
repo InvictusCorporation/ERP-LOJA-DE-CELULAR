@@ -28,6 +28,10 @@ export type Identity = {
 };
 const rights: Record<string, string[]> = {
   owner: [
+    "credit_read",
+    "credit_manage",
+    "credit_settings",
+    "credit_sell",
     "finance_read",
     "finance_manage",
     "crm_read",
@@ -56,6 +60,9 @@ const rights: Record<string, string[]> = {
     "service_deliver",
   ],
   manager: [
+    "credit_read",
+    "credit_manage",
+    "credit_sell",
     "finance_read",
     "finance_manage",
     "crm_read",
@@ -81,7 +88,14 @@ const rights: Record<string, string[]> = {
     "service_approve",
     "service_deliver",
   ],
-  cashier: ["read", "pos_read", "pos_sell", "pos_cash", "customer_lookup"],
+  cashier: [
+    "read",
+    "pos_read",
+    "pos_sell",
+    "pos_cash",
+    "customer_lookup",
+    "credit_sell",
+  ],
   technician: ["read", "service_read", "service_work", "service_parts"],
   stock: ["read", "stock"],
   viewer: ["read"],

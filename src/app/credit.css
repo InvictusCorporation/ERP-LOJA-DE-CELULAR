@@ -1,0 +1,441 @@
+.credit-panel {
+  min-width: 0;
+}
+.credit-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.credit-toolbar > .field {
+  min-width: 240px;
+  max-width: 420px;
+  flex: 1;
+}
+.credit-toolbar > .badge {
+  margin-bottom: 13px;
+}
+.credit-notice {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #eee3a7;
+  background: #fffce9;
+  border-radius: 12px;
+  padding: 20px;
+}
+.credit-notice > svg {
+  flex-shrink: 0;
+  color: #ac9422;
+}
+.credit-notice p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #7b7048;
+  flex: 1;
+}
+.credit-list-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.credit-list-toolbar .search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+}
+.credit-list-toolbar .search-box input {
+  flex: 1;
+  min-width: 0;
+}
+.credit-list-toolbar > select {
+  border: 1px solid #e2e6ec;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+.credit-panel table {
+  min-width: 720px;
+}
+.credit-panel td {
+  vertical-align: top;
+}
+.credit-panel td strong {
+  display: block;
+  font-size: 13px;
+}
+.credit-panel td small {
+  display: block;
+  font-size: 11px;
+  color: #8a98ab;
+  margin-top: 7px;
+  line-height: 1.7;
+}
+.credit-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.credit-metrics article {
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e2e7ed;
+  border-radius: 12px;
+  display: grid;
+  gap: 13px;
+  min-width: 0;
+}
+.credit-metrics span {
+  font-size: 12px;
+  color: #8090a3;
+}
+.credit-metrics strong {
+  font-size: 25px;
+  letter-spacing: -0.5px;
+  overflow-wrap: anywhere;
+}
+.credit-contract-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+.credit-contract-header h2 {
+  font-size: 26px;
+  margin: 9px 0;
+}
+.credit-contract-header small {
+  font-size: 11px;
+  color: #8290a3;
+  overflow-wrap: anywhere;
+}
+.credit-history {
+  padding: 23px;
+  display: grid;
+  gap: 20px;
+}
+.credit-history article {
+  border-left: 2px solid #d1bd37;
+  padding: 0 17px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.credit-history small {
+  display: block;
+  font-size: 11px;
+  color: #8796a9;
+}
+.credit-history p {
+  color: #66788c;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.credit-policy {
+  padding: 25px;
+  color: #64748a;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.credit-policy h3 {
+  color: #243447;
+  margin: 0 0 13px;
+}
+.credit-terms {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.9;
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 18px;
+  font-size: 13px;
+  margin: 14px 0;
+  color: #516177;
+}
+.credit-sim-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+.credit-sim-totals p {
+  font-size: 11px;
+  color: #8190a3;
+  background: #f6f8fa;
+  padding: 14px;
+  border-radius: 8px;
+  line-height: 1.8;
+  margin: 0;
+  min-width: 0;
+}
+.credit-sim-totals strong {
+  display: block;
+  font-size: 16px;
+  color: #293b4e;
+  overflow-wrap: anywhere;
+}
+.credit-modal {
+  max-width: 850px;
+}
+.credit-modal .modal-header {
+  padding: 24px;
+}
+.credit-modal .modal-body {
+  display: grid;
+  gap: 20px;
+  max-height: 66vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+.credit-modal .modal-footer {
+  padding: 20px 24px;
+}
+.credit-modal .field small {
+  font-size: 11px;
+  color: #8795a7;
+}
+.credit-modal .modal-body > p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #6c7e92;
+}
+.credit-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #52677f;
+}
+.credit-check input {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.credit-simulation {
+  border: 1px solid #e7e4c5;
+  border-radius: 10px;
+  padding: 18px;
+  display: grid;
+  gap: 15px;
+}
+.credit-simulation h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.credit-simulation > p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #718198;
+}
+.credit-simulation table {
+  min-width: 580px;
+}
+.credit-payment-summary {
+  padding: 18px;
+  background: #f6f8fa;
+  border-radius: 10px;
+}
+.credit-payment-summary p {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 13px;
+  color: #64758a;
+  line-height: 1.8;
+  margin: 9px 0;
+}
+.credit-payment-summary p:last-child {
+  border-top: 1px solid #dfe5ec;
+  padding-top: 12px;
+  font-weight: 600;
+  color: #26374c;
+}
+.credit-document-modal {
+  max-width: 1000px;
+}
+.credit-document-modal .modal-header,
+.credit-document-modal .modal-footer {
+  padding: 22px 26px;
+}
+.credit-document {
+  padding: 35px;
+  max-height: 70vh;
+  overflow-y: auto;
+  color: #243449;
+  line-height: 1.8;
+  font-size: 14px;
+}
+.credit-document header {
+  text-align: center;
+}
+.credit-document header > span {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #8b97a7;
+}
+.credit-document h1 {
+  font-size: 24px;
+  margin: 14px 0;
+}
+.credit-document h2 {
+  font-size: 17px;
+  margin: 16px 0;
+}
+.credit-document code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.credit-document p {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.credit-document section {
+  padding: 20px 0;
+  border-top: 1px solid #e1e6ec;
+  margin-top: 20px;
+  break-inside: auto;
+}
+.credit-document table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.credit-document td,
+.credit-document th {
+  text-align: left;
+  padding: 9px;
+  border-bottom: 1px solid #e2e6ec;
+}
+.credit-document footer {
+  border-top: 1px solid #dbe2eb;
+  margin-top: 25px;
+  padding-top: 20px;
+}
+.credit-document footer p {
+  margin: 20px 0;
+}
+.credit-document .credit-terms {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+@media (max-width: 750px) {
+  .credit-metrics {
+    grid-template-columns: 1fr;
+  }
+  .credit-sim-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .credit-notice {
+    flex-wrap: wrap;
+  }
+  .credit-notice p {
+    flex-basis: calc(100% - 42px);
+  }
+  .credit-notice > .btn {
+    margin-left: 35px;
+  }
+  .credit-toolbar > .field {
+    min-width: 190px;
+  }
+  .credit-list-toolbar .search-box {
+    flex-basis: 100%;
+  }
+  .credit-contract-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .credit-modal .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .credit-document {
+    padding: 22px;
+    font-size: 13px;
+  }
+  .credit-document h1 {
+    font-size: 21px;
+  }
+  .credit-document table {
+    font-size: 10px;
+  }
+  .credit-document td,
+  .credit-document th {
+    padding: 5px;
+  }
+}
+@media print {
+  body:has(.credit-document) {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body:has(.credit-document) > :not(.modal-backdrop) {
+    display: none !important;
+  }
+  body:has(.credit-document) * {
+    visibility: hidden !important;
+  }
+  body:has(.credit-document) .credit-document,
+  body:has(.credit-document) .credit-document * {
+    visibility: visible !important;
+  }
+  .credit-document-modal {
+    position: static !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    max-width: none !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  .credit-document {
+    position: relative !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 5mm !important;
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+  }
+  .credit-document * {
+    font-size: 12pt !important;
+  }
+  .credit-document h1 {
+    font-size: 18pt !important;
+  }
+  .credit-document h2 {
+    font-size: 14pt !important;
+  }
+  .credit-document table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: auto !important;
+  }
+  .credit-document td,
+  .credit-document th {
+    padding: 3mm 1mm !important;
+  }
+  .credit-document-modal > .no-print {
+    display: none !important;
+  }
+  body:has(.credit-document) .modal-backdrop {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .credit-document header,
+  .credit-document footer {
+    break-inside: avoid;
+  }
+}

@@ -39,6 +39,12 @@ Os testes locais não comprovam o comportamento da conexão Prisma contra o Post
 
 ## Recuperação e incidentes
 
+O módulo 6 adiciona `202610290009_store_credit`. A cópia offline anterior foi preservada em `backups/pre-modulo6-20261029`. Após restaurar, confira perfis/CPF, limites, ofertas ainda reservadas, contratos e revisões, parcelas, recibos, contas, descontos e eventos da DRE. A cópia contém dados privados e não acompanha o Git.
+
+O crediário inicia desabilitado. O proprietário deve registrar a revisão real dos termos, taxas e método antes de habilitar ofertas; aprovações de comprador e consultas externas são manuais. Revise acessos a documentos e proteja contratos exportados com dados pessoais. Não há mensagens automáticas, conexão com bureaus, assinatura eletrônica ou cobrança bancária. A primeira implantação de produção exige homologação das migrações e do ledger no PostgreSQL escolhido, além da validação dos documentos comerciais.
+
+Para corrigir recebimento, desfaça sua conciliação e use estorno no crediário. Títulos de parcelas não permitem baixa/edição pelo fluxo financeiro genérico. Renegociação preserva recibos e cria novo calendário somente para principal aberto; encargos não recebidos são dispensados. Devolução de venda financiada é integral com restituição dos recebimentos e nova venda dos produtos eventualmente mantidos. A confirmação de ressarcimento é manual e deve corresponder aos valores efetivos conferidos fora do ERP.
+
 O módulo 5 adiciona `202610280006_finance`, `202610280007_finance_opening_review` e `202610290008_finance_title_classification`. A cópia offline anterior fica em `backups/pre-modulo5-20261028`. Confira títulos, baixas, ledger, contas, conciliações, classificação operacional/patrimonial e saldos importados após restaurar. Não altere migrações já aplicadas. Novas migrações locais são aplicadas antes de a interface ficar pronta.
 
 Após atualizar, confira os recebimentos/devoluções do PDV que aguardam conta e os saldos anteriores de serviços entregues. Serviços antigos podem ter sido pagos externamente: ficam fora do aberto/previsto até a conferência documentada. A baixa posterior usa a conta efetiva e referência. Informe saldos iniciais de contas sem duplicar movimentos históricos que ainda serão classificados. Conciliação é manual, sem credenciais ou conexão bancária automática.
