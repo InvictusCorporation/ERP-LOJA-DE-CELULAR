@@ -1,6 +1,6 @@
 # Invictus ERP Mobile
 
-Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica** e **4 — CRM e Clientes**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 5–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
+Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes** e **5 — Gestão Financeira**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 6–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
 ## Executar localmente
 
@@ -62,6 +62,18 @@ O valor do serviço considera mão de obra e peças efetivamente utilizadas, res
 6. Crie lembretes com data e hora de Fortaleza. A agenda exibe pendentes e atrasados; atualize o registro para concluir, cancelar ou reagendar. Os lembretes são internos, sem notificações externas.
 7. Para encerrar um relacionamento, finalize lembretes e oportunidades e arquive o cliente. Os históricos permanecem consultáveis; reative o cadastro para novos negócios.
 
+## Demonstrar o financeiro
+
+1. Em **Gestão financeira → Contas e centros**, cadastre contas por filial e centros de custo compartilhados. Informe o saldo inicial sem incluir novamente recebimentos que ainda serão classificados no ERP.
+2. Lance **Contas a pagar** e **Contas a receber**, com contraparte, competência, vencimento e centro. Escolha o tratamento: operacional reconhece receita/despesa por competência; **Patrimonial / estoque** mantém saldo e fluxo, sem repetir custos na DRE. A baixa registra o recebimento ou pagamento.
+3. Abra o título e registre uma baixa total ou parcial na conta da mesma filial, com data realizada e referência. Reenvios não duplicam o movimento; pagamentos acima do saldo aberto são recusados.
+4. Consulte **Movimentos e conciliação**, confira valor, conta e referência com o extrato ou comprovante e concilie. A conciliação é manual, sem conexão bancária. Desfazer preserva a trilha; para estornar uma baixa, desfaça primeiro sua conciliação. O estorno cria movimento compensatório.
+5. Recebimentos e devoluções do PDV entram automaticamente uma vez, inicialmente **sem conta financeira**. Ao conciliar, escolha a conta efetiva. Essas operações já constam no fluxo registrado; classificá-las não cria nova receita. Aberturas de caixa, sangrias e suprimentos do PDV não são novas receitas/despesas financeiras. Represente transferências patrimoniais entre contas pela operação própria.
+6. Serviços novos entregues com reparo geram um recebível pelo valor real de mão de obra e peças usadas. Serviços anteriores ao financeiro aparecem com **saldo a conferir**. No filtro **Conferir saldos anteriores**, abra o título, confira os comprovantes e informe somente o saldo ainda aberto. Recebimentos externos anteriores não criam entradas fictícias nas contas atuais. Esses títulos ficam fora dos valores em aberto e previstos até a conferência.
+7. No **Painel e resultados**, compare DRE gerencial por competência, fluxo realizado, previsão por vencimento, valores atrasados, resultados por filial e centros de custo. Escolha **Consolidado** para reunir somente suas filiais autorizadas. Exporte o relatório ou a página de movimentos em CSV.
+
+Transferências, saldos iniciais e ajustes patrimoniais não compõem a DRE. As devoluções reduzem receita e custo na data da devolução; serviços são reconhecidos na entrega. Taxas de cartão e outras despesas são lançadas separadamente. A DRE é gerencial e não realiza apuração fiscal ou demonstração contábil. Proprietário e gerente têm acesso; caixa, técnico e estoquista não recebem permissão financeira.
+
 ## Verificações
 
 ```powershell
@@ -82,5 +94,6 @@ Os testes de API usam PostgreSQL embarcado real, role sem privilégios de propri
 - [Relatório do PDV](docs/ENTREGA-MODULO-2.md)
 - [Relatório da assistência técnica](docs/ENTREGA-MODULO-3.md)
 - [Relatório do CRM](docs/ENTREGA-MODULO-4.md)
+- [Relatório financeiro](docs/ENTREGA-MODULO-5.md)
 
 Integrações de identidade, white label, assinaturas e ponto dependem da análise dos projetos existentes da Invictus. Não foi criado um segundo sistema de ponto.

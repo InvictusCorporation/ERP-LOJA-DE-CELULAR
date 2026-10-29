@@ -17,6 +17,7 @@ import { Database } from "./db";
 import { PosService } from "./pos";
 import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
+import { FinanceService } from "./finance";
 import {
   InventoryService,
   validate,
@@ -62,6 +63,7 @@ class ApiController {
     @Inject(PosService) private pos: PosService,
     @Inject(RepairService) private repairs: RepairService,
     @Inject(CrmService) private crm: CrmService,
+    @Inject(FinanceService) private finance: FinanceService,
   ) {}
   @All("{*path}")
   async handle(@Req() req: Request, @Res() res: Response) {
@@ -221,6 +223,75 @@ class ApiController {
       );
       res.clearCookie("invictus_session", cookieOptions());
       return { ok: true };
+    }
+    const financeBranch = String(req.query.branch_id || "");
+    const financeStart = String(req.query.start || "");
+    const financeEnd = String(req.query.end || "");
+    const financePage = () =>
+      validate(z.coerce.number().int().min(1).max(100000), req.query.page || 1);
+    if (path === "/finance/config" && method === "GET")
+      return this.finance.config(i, financeBranch);
+    if (path === "/finance/reports" && method === "GET")
+      return this.finance.reports(i, financeBranch, financeStart, financeEnd);
+    if (path === "/finance/accounts" && method === "POST")
+      return this.finance.createAccount(i, body, key);
+    if (path === "/finance/centers" && method === "POST")
+      return this.finance.saveCenter(i, null, body, key);
+    if (path === "/finance/transfers" && method === "POST")
+      return this.finance.transfer(i, body, key);
+    if (path === "/finance/titles" && method === "GET")
+      return this.finance.titles(
+        i,
+        financeBranch,
+        String(req.query.direction || ""),
+        String(req.query.status || "all"),
+        financeStart,
+        financeEnd,
+        financePage(),
+        String(req.query.q || ""),
+      );
+    if (path === "/finance/titles" && method === "POST")
+      return this.finance.createTitle(i, body, key);
+    if (path === "/finance/entries" && method === "GET")
+      return this.finance.entries(
+        i,
+        financeBranch,
+        financeStart,
+        financeEnd,
+        String(req.query.status || "all"),
+        financePage(),
+      );
+    const financeAction = path.match(
+      /^\/finance\/(accounts|centers|titles|settlements|entries|reconciliations)\/([\w-]+)(?:\/(adjust|settle|cancel|reverse|reconcile|undo|review))?$/,
+    );
+    if (financeAction) {
+      const [, type, id, action] = financeAction;
+      if (type === "titles" && method === "GET" && !action)
+        return this.finance.titleDetail(i, id);
+      if (type === "entries" && method === "GET" && !action)
+        return this.finance.entryDetail(i, id);
+      if (method === "POST") {
+        if (type === "accounts" && !action)
+          return this.finance.updateAccount(i, id, body, key);
+        if (type === "accounts" && action === "adjust")
+          return this.finance.adjustment(i, id, body, key);
+        if (type === "centers" && !action)
+          return this.finance.saveCenter(i, id, body, key);
+        if (type === "titles" && !action)
+          return this.finance.updateTitle(i, id, body, key);
+        if (type === "titles" && action === "review")
+          return this.finance.reviewOpening(i, id, body, key);
+        if (type === "titles" && action === "settle")
+          return this.finance.settle(i, id, body, key);
+        if (type === "titles" && action === "cancel")
+          return this.finance.cancel(i, id, body, key);
+        if (type === "settlements" && action === "reverse")
+          return this.finance.reverse(i, id, body, key);
+        if (type === "entries" && action === "reconcile")
+          return this.finance.reconcile(i, id, body, key);
+        if (type === "reconciliations" && action === "undo")
+          return this.finance.undoReconciliation(i, id, body, key);
+      }
     }
     const crmPage = () =>
       validate(z.coerce.number().int().min(1).max(100000), req.query.page || 1);
@@ -556,6 +627,10 @@ export async function createApp(db: Database) {
   @Module({
     controllers: [ApiController],
     providers: [
+      {
+        provide: FinanceService,
+        useValue: new FinanceService(db, new InventoryService(db)),
+      },
       {
         provide: CrmService,
         useValue: new CrmService(db, new InventoryService(db)),
