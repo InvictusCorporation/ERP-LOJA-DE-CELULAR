@@ -376,7 +376,11 @@ export class InventoryService {
     type: string,
     unit: string | null = null,
     reverses: string | null = null,
-    links: { saleItemId?: string; returnItemId?: string } = {},
+    links: {
+      saleItemId?: string;
+      returnItemId?: string;
+      repairEventId?: string;
+    } = {},
   ) {
     const id = randomUUID();
     await tx.query(
@@ -384,7 +388,7 @@ export class InventoryService {
       [balance, b.product_id, b.branch_id],
     );
     await tx.query(
-      "INSERT INTO stock_movements(id,tenant_id,branch_id,product_id,type,quantity,balance_after,reason,actor_id,unit_id,reverses_id,sale_item_id,return_item_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id",
+      "INSERT INTO stock_movements(id,tenant_id,branch_id,product_id,type,quantity,balance_after,reason,actor_id,unit_id,reverses_id,sale_item_id,return_item_id,repair_part_event_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id",
       [
         id,
         i.tenant_id,
@@ -399,6 +403,7 @@ export class InventoryService {
         reverses,
         links.saleItemId || null,
         links.returnItemId || null,
+        links.repairEventId || null,
       ],
     );
     await audit(
@@ -549,6 +554,11 @@ export class InventoryService {
       ]);
       if (!m) fail(404, "Movimentação não encontrada.");
       branchAccess(i, m.branch_id);
+      if (m.repair_part_event_id)
+        fail(
+          409,
+          "Devolva a peça pela ordem de serviço para corrigir esta movimentação.",
+        );
       if (m.sale_item_id || m.return_item_id)
         fail(
           409,

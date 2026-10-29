@@ -36,8 +36,10 @@ import {
   Boxes,
   CircleHelp,
   ShoppingCart,
+  Wrench,
 } from "lucide-react";
 import PosPanel from "./pos-panel";
+import RepairsPanel from "./repairs-panel";
 
 type Row = Record<string, any>;
 type Me = {
@@ -81,12 +83,14 @@ const labels: Row = {
   stock: "Estoquista",
   viewer: "Consulta",
   cashier: "Operador de caixa",
+  technician: "Técnico",
   in_stock: "Em estoque",
   out: "Fora do estoque",
 };
 const nav = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "pos", label: "Frente de caixa", icon: ShoppingCart },
+  { id: "repairs", label: "Assistência técnica", icon: Wrench },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -632,6 +636,7 @@ export default function App() {
                     {can("adjust") &&
                     !m.sale_item_id &&
                     !m.return_item_id &&
+                    !m.repair_part_event_id &&
                     m.type !== "reversal" &&
                     !m.reversal_id ? (
                       <button
@@ -685,7 +690,8 @@ export default function App() {
             .filter(
               (n) =>
                 (n.id !== "audit" || can("audit")) &&
-                (n.id !== "pos" || can("pos_read")),
+                (n.id !== "pos" || can("pos_read")) &&
+                (n.id !== "repairs" || can("service_read")),
             )
             .map((n) => (
               <button
@@ -701,8 +707,8 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 e 2 ativos
-            <small>Produtos, Estoque e PDV</small>
+            <span className="status-dot" /> Módulos 1 a 3 ativos
+            <small>Estoque, PDV e Assistência</small>
           </div>
           <button
             className="profile"
@@ -771,6 +777,8 @@ export default function App() {
                   {
                     overview: "Uma visão clara do seu estoque, em tempo real.",
                     pos: "Vendas, pagamentos e caixa integrados ao seu estoque.",
+                    repairs:
+                      "Do recebimento à entrega, acompanhe cada etapa do reparo.",
                     products: "Organize seu catálogo e acompanhe cada produto.",
                     units:
                       "Identificação individual, procedência e rastreabilidade.",
@@ -818,6 +826,15 @@ export default function App() {
             <>
               {view === "pos" && can("pos_read") && (
                 <PosPanel
+                  key={branch}
+                  branch={branch}
+                  permissions={me.permissions}
+                  mutate={mutate}
+                  onNotice={show}
+                />
+              )}
+              {view === "repairs" && can("service_read") && (
+                <RepairsPanel
                   key={branch}
                   branch={branch}
                   permissions={me.permissions}
@@ -1428,7 +1445,7 @@ export default function App() {
                             : "PostgreSQL de produção"}
                         </dd>
                         <dt>Módulos disponíveis</dt>
-                        <dd>1 · Produtos e Estoque / 2 · Frente de Caixa</dd>
+                        <dd>1 · Estoque / 2 · PDV / 3 · Assistência Técnica</dd>
                       </dl>
                     </section>
                     <section className="panel">
@@ -1777,6 +1794,10 @@ export default function App() {
                         </option>
                         <option value="cashier">
                           Operador de caixa · vendas e caixa, sem descontos
+                        </option>
+                        <option value="technician">
+                          Técnico · ordens atribuídas e peças, sem aprovação
+                          comercial
                         </option>
                         <option value="manager">
                           Gerente · catálogo, custos, inventário e auditoria

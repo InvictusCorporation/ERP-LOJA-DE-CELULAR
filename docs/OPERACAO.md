@@ -24,7 +24,7 @@ Os arquivos de backup contêm dados pessoais e hashes de autenticação. Guarde-
 
 ## PostgreSQL de produção
 
-Atualizações do PDV usam migrações incrementais. Pare as escritas, preserve um backup e execute `pnpm db:migrate` com a conta administrativa antes de iniciar a nova versão. Não substitua o banco nem reaplique manualmente a migração inicial. No ambiente local, as migrações são aplicadas na abertura da API, que fica pronta antes da interface iniciar.
+Atualizações do ERP usam migrações incrementais. Pare as escritas, preserve um backup e execute `pnpm db:migrate` com a conta administrativa antes de iniciar a nova versão. Não substitua o banco nem reaplique manualmente a migração inicial. No ambiente local, as migrações são aplicadas na abertura da API, que fica pronta antes da interface iniciar. A assistência adiciona a quarta migração, `202610280004_repairs`; migrações já aplicadas não devem ser editadas.
 
 1. Disponibilize PostgreSQL em rede privada com TLS. Separe homologação e produção.
 2. Configure `DATABASE_URL` com o usuário de runtime `invictus_app` e `MIGRATION_DATABASE_URL` com a conta administrativa de migração. Não use segredos no frontend ou no Git.
@@ -38,6 +38,10 @@ Atualizações do PDV usam migrações incrementais. Pare as escritas, preserve 
 Os testes locais não comprovam o comportamento da conexão Prisma contra o PostgreSQL hospedado. Rode a homologação no provedor escolhido, verificando role, RLS, concorrência e restauração antes de utilizar dados reais de uma loja.
 
 ## Recuperação e incidentes
+
+Antes da atualização local do módulo 3 foi preservada uma cópia offline em `backups/pre-modulo3-20261028`. Esse diretório é local e não acompanha o Git. As fotos das ordens ficam no banco e devem ser incluídas nas verificações de restauração. Monitore espaço, tempo de backup e acesso aos dados pessoais. Para volumes maiores, planeje armazenamento privado de objetos e sua recuperação conjunta antes de migrar as imagens.
+
+Ordens entregues são somente consulta. Correções de peças devem ocorrer pelo fluxo da assistência antes da entrega, preservando consumos e devoluções. Consulte os históricos e a trilha de eventos ao reconciliar uma ordem com o estoque.
 
 Bloqueie escritas durante a recuperação. Preserve os dados atuais para análise; restaure em um destino separado. Confira empresas, filiais, produtos, saldos e quantidade de movimentos, depois execute reconciliação entre saldo e ledger. Somente então faça a troca de conexão.
 
