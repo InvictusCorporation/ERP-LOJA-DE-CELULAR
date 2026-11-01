@@ -12,6 +12,7 @@ import {
 } from "./domain";
 import { Identity, permissions } from "./security";
 import { toCents } from "../shared/money";
+import { CreditService } from "./credit";
 
 const amount = z.number().int().min(0).max(1000000000);
 const reason = z.string().trim().min(3).max(1000);
@@ -27,6 +28,10 @@ const checkoutSchema = z
   .object({
     session_id: uuid,
     customer_id: uuid.optional(),
+    credit_offer_id: uuid.optional(),
+    expected_credit_total_cents: amount.optional(),
+    credit_acceptance_reference: z.string().trim().max(500).default(""),
+    credit_terms_accepted: z.boolean().default(false),
     items: z
       .array(
         z
@@ -41,12 +46,14 @@ const checkoutSchema = z
       .max(100),
     discount_cents: amount.default(0),
     expected_total_cents: amount,
-    payments: z.array(payment).min(1).max(4),
+    payments: z.array(payment).max(4),
     note: z.string().trim().max(1000).default(""),
   })
   .strict();
 const refundSchema = z
   .object({
+    credit_refund_confirmed: z.boolean().default(false),
+    expected_credit_refund_cents: amount.default(0),
     session_id: uuid,
     kind: z.enum(["return", "cancel"]),
     items: z
@@ -100,10 +107,13 @@ export function distributeDiscount(discount: number, values: number[]) {
   return rows.map((r) => r.value);
 }
 export class PosService {
+  private credit: CreditService;
   constructor(
     private db: Database,
     private inventory: InventoryService,
-  ) {}
+  ) {
+    this.credit = new CreditService(db, inventory);
+  }
   private canManage(i: Identity) {
     return permissions(i.role).includes("pos_manage");
   }
@@ -379,6 +389,8 @@ export class PosService {
   async checkout(i: Identity, body: unknown, key: unknown) {
     permit(i, "pos_sell");
     const b = validate(checkoutSchema, body);
+    if (!b.credit_offer_id && !b.payments.length)
+      fail(400, "Informe ao menos um pagamento.");
     if (b.discount_cents) permit(i, "pos_discount");
     unique(
       b.items.map((x) => `${x.product_id}:${x.unit_id || "bulk"}`),
@@ -472,8 +484,22 @@ export class PosService {
             409,
             "Os preços mudaram. Atualize os produtos e confira o total antes de vender.",
           );
+        const credit = b.credit_offer_id
+          ? await this.credit.prepareSale(
+              tx,
+              i,
+              b.credit_offer_id,
+              s.branch_id,
+              b.customer_id,
+              total,
+              b.expected_credit_total_cents ?? -1,
+              b.credit_acceptance_reference,
+              b.credit_terms_accepted,
+            )
+          : null;
+        const dueNow = credit ? credit.offer.down_cents : total;
         const tendered = b.payments.reduce((n, p) => n + p.amount_cents, 0),
-          change = tendered - total,
+          change = tendered - dueNow,
           cash = b.payments.find((p) => p.method === "cash");
         if (change < 0) fail(400, "Os pagamentos não cobrem o valor da venda.");
         if (change > (cash?.amount_cents || 0))
@@ -564,6 +590,9 @@ export class PosService {
           if (p.method === "cash" && net > 0)
             await this.cash(tx, i, s, "sale", net, `Recebimento ${code}`, id);
         }
+        const creditContract = credit
+          ? await this.credit.activateSale(tx, i, id, credit)
+          : null;
         await audit(
           tx,
           i,
@@ -581,6 +610,7 @@ export class PosService {
           receipt_code: code,
           total_cents: total,
           change_cents: change,
+          credit_contract_id: creditContract?.id || null,
         };
       },
     );
@@ -629,7 +659,18 @@ export class PosService {
         "SELECT p.return_id,p.method,p.amount_cents,p.reference FROM pos_refund_payments p JOIN pos_returns r ON r.id=p.return_id WHERE r.sale_id=$1",
         [id],
       );
-      return { sale, items, payments, returns, refunds };
+      const [credit] = await tx.query(
+        `SELECT c.id,c.code,c.status,p.simulation,coalesce((SELECT sum(e.amount_cents) FROM credit_receipts r JOIN finance_entries e ON e.settlement_id=r.settlement_id AND e.source_kind='settlement' WHERE r.contract_id=c.id AND NOT EXISTS(SELECT 1 FROM finance_entries v WHERE v.reverses_entry_id=e.id)),0)::int AS received_cents FROM credit_contracts c JOIN credit_plans p ON p.id=c.current_plan_id WHERE c.sale_id=$1`,
+        [id],
+      );
+      return {
+        sale,
+        items,
+        payments,
+        returns,
+        refunds,
+        credit: credit || null,
+      };
     });
   }
   async refund(i: Identity, saleId: string, body: unknown, key: unknown) {
@@ -698,7 +739,32 @@ export class PosService {
           };
         });
         const total = lines.reduce((n, l) => n + l.return_cents, 0);
-        if (total !== b.payments.reduce((n, p) => n + p.amount_cents, 0))
+        const [financed] = await tx.query(
+          "SELECT id FROM credit_contracts WHERE sale_id=$1",
+          [saleId],
+        );
+        if (financed && b.kind !== "cancel")
+          fail(
+            409,
+            "Venda financiada exige cancelamento integral e nova venda dos itens mantidos.",
+          );
+        const creditCancellation = financed
+          ? await this.credit.cancelSale(
+              tx,
+              i,
+              saleId,
+              b.reason,
+              b.expected_credit_refund_cents,
+              b.credit_refund_confirmed,
+            )
+          : null;
+        const [down] = creditCancellation
+          ? await tx.query(
+              "SELECT coalesce(sum(amount_cents),0)::int AS amount FROM pos_sale_payments WHERE sale_id=$1",
+              [saleId],
+            )
+          : [{ amount: total }];
+        if (down.amount !== b.payments.reduce((n, p) => n + p.amount_cents, 0))
           fail(
             400,
             "O valor da devolução deve corresponder exatamente aos itens, após o desconto original.",
