@@ -12,6 +12,8 @@ export const roleLabels: Record<string, string> = {
 };
 export const roleRights: Record<string, string[]> = {
   owner: [
+    "branch_read",
+    "branch_transfer",
     "reports_read",
     "purchase_read",
     "purchase_manage",
@@ -47,6 +49,8 @@ export const roleRights: Record<string, string[]> = {
     "service_deliver",
   ],
   manager: [
+    "branch_read",
+    "branch_transfer",
     "reports_read",
     "purchase_read",
     "purchase_manage",
@@ -87,7 +91,7 @@ export const roleRights: Record<string, string[]> = {
     "credit_sell",
   ],
   technician: ["read", "service_read", "service_work", "service_parts"],
-  stock: ["read", "stock"],
+  stock: ["read", "stock", "branch_read", "branch_transfer"],
   viewer: ["read"],
 };
 
@@ -96,6 +100,7 @@ roleRights.administrator = roleRights.owner.filter(
 );
 roleRights.seller = [...roleRights.cashier, "crm_read", "crm_manage"];
 roleRights.financial = [
+  "branch_read",
   "read",
   "cost",
   "finance_read",
@@ -109,7 +114,9 @@ export const permissionLabels: Record<string, string> = {
   catalog: "Gerir produtos e cadastros",
   stock: "Entradas e saídas de estoque",
   adjust: "Inventário, mínimos e estornos de estoque",
-  branches: "Provisionar filiais",
+  branches: "Gerir cadastro e situação das filiais",
+  branch_read: "Consultar gestão das filiais autorizadas",
+  branch_transfer: "Transferir mercadorias entre filiais autorizadas",
   users: "Gerir funcionários e acessos",
   audit: "Consultar auditoria geral",
   pos_read: "Consultar PDV",
@@ -145,6 +152,7 @@ export const reservedPermissions = [
   "credit_settings",
 ];
 export const dependencies: Record<string, string[]> = {
+  branch_transfer: ["branch_read", "stock"],
   catalog: ["cost"],
   adjust: ["stock"],
   pos_sell: ["pos_read", "pos_cash"],

@@ -46,6 +46,7 @@ import CrmPanel from "./crm-panel";
 import FinancePanel from "./finance-panel";
 import CreditPanel from "./credit-panel";
 import ProductBarcode, { ProductStockControl } from "./product-fields";
+import BranchesPanel from "./branches-panel";
 import EmployeesPanel from "./employees-panel";
 import ReportsPanel from "./reports-panel";
 import PurchasesPanel from "./purchases-panel";
@@ -65,7 +66,6 @@ type Modal =
   | "count"
   | "minimum"
   | "catalog"
-  | "branch"
   | "reverse"
   | null;
 const brl = (n: any) =>
@@ -108,6 +108,7 @@ const nav = [
   { id: "purchases", label: "Compras e fornecedores", icon: Package },
   { id: "reports", label: "Relatórios gerenciais", icon: ChartNoAxesCombined },
   { id: "employees", label: "Funcionários e permissões", icon: UsersRound },
+  { id: "branches", label: "Gestão de filiais", icon: Building2 },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -359,10 +360,7 @@ export default function App() {
           name: value("name"),
           contact: value("contact"),
         });
-      else if (modal === "branch") {
-        await mutate("/branches", { name: value("name") });
-        await refreshMe();
-      } else if (modal === "minimum")
+      else if (modal === "minimum")
         await mutate(
           "/minimum",
           {
@@ -704,7 +702,8 @@ export default function App() {
                 (n.id !== "credit" || can("credit_read")) &&
                 (n.id !== "purchases" || can("purchase_read")) &&
                 (n.id !== "reports" || can("reports_read")) &&
-                (n.id !== "employees" || can("users")),
+                (n.id !== "employees" || can("users")) &&
+                (n.id !== "branches" || can("branch_read")),
             )
             .map((n) => (
               <button
@@ -720,10 +719,10 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 a 9 ativos
+            <span className="status-dot" /> Módulos 1 a 10 ativos
             <small>
               Estoque, PDV, Assistência, CRM, Financeiro, Crediário, Compras,
-              Relatórios e Funcionários
+              Relatórios, Funcionários e Filiais
             </small>
           </div>
           <button
@@ -796,6 +795,8 @@ export default function App() {
                     crm: "Clientes, históricos e próximos passos do atendimento.",
                     finance:
                       "Recebimentos, pagamentos e resultados da sua operação.",
+                    branches:
+                      "Unidades, estoques e transferências com conferência.",
                     employees: "Equipe, funções e acesso por filial.",
                     reports:
                       "Indicadores e comparativos para acompanhar sua loja.",
@@ -905,6 +906,21 @@ export default function App() {
                   companyName={me.tenant.name}
                   mutate={mutate}
                   onNotice={show}
+                />
+              )}
+              {view === "branches" && can("branch_read") && (
+                <BranchesPanel
+                  branch={branch}
+                  branches={me.branches}
+                  permissions={me.permissions}
+                  companyName={me.tenant.name}
+                  mutate={mutate}
+                  onNotice={show}
+                  onRefresh={refreshMe}
+                  onOpen={(id, view) => {
+                    setBranch(id);
+                    navigate(view);
+                  }}
                 />
               )}
               {view === "employees" && can("users") && (
@@ -1532,20 +1548,20 @@ export default function App() {
                         <dd>
                           1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM / 5
                           · Financeiro / 6 · Crediário próprio / 7 · Compras / 8
-                          · Relatórios / 9 · Funcionários
+                          · Relatórios / 9 · Funcionários / 10 · Filiais
                         </dd>
                       </dl>
                     </section>
                     <section className="panel">
                       <div className="panel-heading">
                         <h2>Filiais autorizadas</h2>
-                        {local && can("branches") && (
+                        {can("branch_read") && (
                           <button
                             className="secondary small"
-                            onClick={() => open("branch")}
+                            onClick={() => navigate("branches")}
                           >
                             <Plus size={16} />
-                            Adicionar
+                            Gerir filiais
                           </button>
                         )}
                       </div>
@@ -1781,18 +1797,6 @@ export default function App() {
                     </Field>
                     <Field label="Contato ou observação">
                       <input name="contact" maxLength={300} />
-                    </Field>
-                  </>
-                )}
-                {modal === "branch" && (
-                  <>
-                    <p className="form-hint">
-                      Cadastro básico de filial para separar saldos.
-                      Transferências e gestão comercial serão implementadas em
-                      outra etapa.
-                    </p>
-                    <Field label="Nome da filial">
-                      <input name="name" required maxLength={180} autoFocus />
                     </Field>
                   </>
                 )}

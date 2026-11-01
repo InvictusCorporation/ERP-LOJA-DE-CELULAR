@@ -380,6 +380,8 @@ export class InventoryService {
       returnItemId?: string;
       repairEventId?: string;
       purchaseReceiptLineId?: string;
+      transferItemId?: string;
+      transferLeg?: string;
     } = {},
   ) {
     const id = randomUUID();
@@ -388,7 +390,7 @@ export class InventoryService {
       [balance, b.product_id, b.branch_id],
     );
     await tx.query(
-      "INSERT INTO stock_movements(id,tenant_id,branch_id,product_id,type,quantity,balance_after,reason,actor_id,unit_id,reverses_id,sale_item_id,return_item_id,repair_part_event_id,purchase_receipt_line_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id",
+      "INSERT INTO stock_movements(id,tenant_id,branch_id,product_id,type,quantity,balance_after,reason,actor_id,unit_id,reverses_id,sale_item_id,return_item_id,repair_part_event_id,purchase_receipt_line_id,transfer_item_id,transfer_leg) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id",
       [
         id,
         i.tenant_id,
@@ -405,6 +407,8 @@ export class InventoryService {
         links.returnItemId || null,
         links.repairEventId || null,
         links.purchaseReceiptLineId || null,
+        links.transferItemId || null,
+        links.transferLeg || null,
       ],
     );
     await audit(
@@ -555,6 +559,11 @@ export class InventoryService {
       ]);
       if (!m) fail(404, "Movimentação não encontrada.");
       branchAccess(i, m.branch_id);
+      if (m.transfer_item_id)
+        fail(
+          409,
+          "Corrija a transferência pelo módulo de Filiais, preservando as duas unidades.",
+        );
       if (m.purchase_receipt_line_id)
         fail(
           409,
