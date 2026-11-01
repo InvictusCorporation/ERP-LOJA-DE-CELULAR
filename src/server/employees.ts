@@ -1,3 +1,4 @@
+import { pointEmployeeMapping } from "../shared/point";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { Database, Tx } from "./db";
@@ -144,24 +145,9 @@ export class EmployeesService {
   }
   async point(i: Identity, id: string) {
     const e = await this.detail(i, id);
-    return {
-      schema_version: 1,
-      tenant_id: i.tenant_id,
-      employee_id: e.id,
-      user_id: e.user_id,
-      external_employee_id: e.point_external_id || null,
-      name: e.name,
-      employee_code: e.employee_code || null,
-      job_title: e.job_title,
-      job_function: e.job_function,
-      home_branch_id: e.home_branch_id,
-      branch_ids: e.branch_ids,
-      active: e.active && e.account_active,
-      version: e.version,
-      integration_status: "mapping_only",
-      attendance: null,
-    };
+    return pointEmployeeMapping(e, i.tenant_id);
   }
+
   private checkAccess(actor: Identity, b: Row, old?: Row) {
     if (!["owner", "administrator"].includes(actor.role))
       fail(403, "Gestão de acesso restrita ao proprietário e administrador.");

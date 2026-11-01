@@ -19,6 +19,7 @@ import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
 import { FinanceService } from "./finance";
 import { CreditService } from "./credit";
+import { PointService } from "./point";
 import { FiscalService } from "./fiscal";
 import { BranchesService } from "./branches";
 import { EmployeesService } from "./employees";
@@ -70,6 +71,7 @@ class ApiController {
     @Inject(CrmService) private crm: CrmService,
     @Inject(FinanceService) private finance: FinanceService,
     @Inject(CreditService) private credit: CreditService,
+    @Inject(PointService) private point: PointService,
     @Inject(FiscalService) private fiscal: FiscalService,
     @Inject(BranchesService) private branches: BranchesService,
     @Inject(EmployeesService) private employees: EmployeesService,
@@ -684,6 +686,24 @@ class ApiController {
         ),
       }));
     }
+    if (path === "/point/overview" && method === "GET")
+      return this.point.overview(i, req.query);
+    if (path === "/point/settings" && method === "POST")
+      return this.point.settings(i, body, key);
+    if (path === "/point/exports" && method === "GET")
+      return this.point.exports(i, req.query);
+    if (path === "/point/exports" && method === "POST")
+      return this.point.prepare(i, body, key);
+    const pointRoute = path.match(/^\/point\/(branches|exports)\/([\w-]+)$/);
+    if (pointRoute) {
+      const [, resource, id] = pointRoute;
+      if (resource === "branches" && method === "POST")
+        return this.point.mapping(i, id, body, key);
+      if (resource === "exports" && method === "GET")
+        return this.point.exported(i, id);
+    }
+    if (["/point/connect", "/point/sync"].includes(path) && method === "POST")
+      return this.point.unavailable(i);
     if (path === "/fiscal/overview" && method === "GET")
       return this.fiscal.overview(i, req.query);
     if (path === "/fiscal/products" && method === "GET")
@@ -805,6 +825,10 @@ export async function createApp(db: Database) {
   @Module({
     controllers: [ApiController],
     providers: [
+      {
+        provide: PointService,
+        useValue: new PointService(db, new InventoryService(db)),
+      },
       {
         provide: FiscalService,
         useValue: new FiscalService(db, new InventoryService(db)),

@@ -114,3 +114,12 @@ Migração 202611010014_fiscal_preparation. Backup offline anterior em backups/p
 A chave local fica em `<DATA_DIR>.fiscal-key` (arquivo binário de 32 bytes). `pnpm db:backup`, com a API parada e BACKUP_OFFLINE_ACK=yes, salva a chave em `<backup.tar.gz>.fiscal-key` quando não usa chave externa. `pnpm db:restore` recupera o companheiro para o diretório novo. Proteja ambos e teste recuperação; cópias offline manuais também precisam da chave. Produção exige FISCAL_ENCRYPTION_KEY (64 caracteres hexadecimais aleatórios) no gerenciador de segredos, com backup separado e seguro. Não versionar nem trocar sem recriptografia planejada. Configurar ACL do Windows/conta do serviço e HTTPS. Não existe recuperação de chave perdida. Remoção do certificado ativo não elimina backups históricos.
 
 Importação A1 confere a abertura com senha, não habilitação, titular ou cadeia/validade para emissão. Nenhuma integração oficial está ativa. XML importado é arquivo não verificado. Veja entrega do módulo 11 para pendências e fontes oficiais antes de configurar o provedor.
+
+
+## Preparação do ponto
+
+Migração 202611010015_point_preparation; backup offline anterior em backups/pre-modulo12-20261101/invictus, com chave fiscal companheira preservada quando existente. Nenhum VPS ou outro projeto alterado. Homologar migração, RLS, privilégios, concorrência e recuperação no PostgreSQL externo antes da produção.
+
+Ponto e frequência guarda somente destino preliminar, identificadores de filiais e pacotes cadastrais locais; nenhum segredo ou envio. Configurar URL/produção não habilita conexão ou assinatura. Pacotes contêm nomes e dados funcionais, incluindo inativos; controlar download e backups, acesso integral ao escopo e política de retenção antes do uso comercial. O pacote não é arquivo de jornada.
+
+Para conectar: disponibilizar o projeto existente, revisar o contrato proposto e todos os IDs, implementar autenticação/allowlist/timeout/entrega/reconciliação, confirmar habilitação na central e homologar dados/capacidades e requisitos legais. Não introduzir chamadas genéricas à URL cadastrada. Não usar o cofre fiscal ou certificado A1 da loja como credencial de ponto sem uma especificação explícita e validada. Ver docs/ENTREGA-MODULO-12.md e docs/INTEGRACAO-PONTO.md.

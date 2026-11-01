@@ -1,0 +1,108 @@
+.point-panel {
+  min-width: 0;
+}
+.point-panel p,
+.point-panel li {
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.point-panel h3 {
+  margin-top: 0;
+}
+.point-banner {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+  background: #edf5ff;
+  border: 1px solid #bfd5ee;
+  border-radius: 12px;
+  color: #23466c;
+}
+.point-banner svg {
+  flex-shrink: 0;
+}
+.point-banner p {
+  margin: 6px 0 0;
+}
+.point-card {
+  background: #fff;
+  border: 1px solid #e1e6ed;
+  border-radius: 12px;
+  padding: 22px;
+  min-width: 0;
+}
+.point-panel fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.point-form-grid,
+.point-branch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.point-form-grid .field {
+  min-width: 0;
+}
+.point-form-grid input,
+.point-form-grid select,
+.point-form-grid textarea {
+  width: 100%;
+}
+.point-branch {
+  padding: 16px;
+  border: 1px solid #e1e6ed;
+  border-radius: 10px;
+  min-width: 0;
+}
+.point-branch h4 {
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+}
+.point-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.point-metrics > div {
+  display: grid;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e1e6ed;
+  border-radius: 12px;
+  padding: 18px;
+}
+.point-metrics small {
+  font-size: 12px;
+  color: #65748a;
+}
+.point-metrics strong {
+  font-size: 26px;
+}
+.point-tabs {
+  flex-wrap: wrap;
+}
+@media (max-width: 700px) {
+  .point-form-grid,
+  .point-branch-grid {
+    grid-template-columns: 1fr;
+  }
+  .point-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .point-card {
+    padding: 16px;
+  }
+  .point-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .point-tabs button {
+    white-space: normal;
+    text-align: left;
+    font-size: 12px;
+  }
+}
