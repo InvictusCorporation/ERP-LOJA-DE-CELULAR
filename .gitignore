@@ -12,3 +12,6 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 *.log
+*.pfx
+*.p12
+*.fiscal-key

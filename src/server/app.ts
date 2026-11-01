@@ -19,6 +19,7 @@ import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
 import { FinanceService } from "./finance";
 import { CreditService } from "./credit";
+import { FiscalService } from "./fiscal";
 import { BranchesService } from "./branches";
 import { EmployeesService } from "./employees";
 import { ReportsService } from "./reports";
@@ -69,6 +70,7 @@ class ApiController {
     @Inject(CrmService) private crm: CrmService,
     @Inject(FinanceService) private finance: FinanceService,
     @Inject(CreditService) private credit: CreditService,
+    @Inject(FiscalService) private fiscal: FiscalService,
     @Inject(BranchesService) private branches: BranchesService,
     @Inject(EmployeesService) private employees: EmployeesService,
     @Inject(ReportsService) private reports: ReportsService,
@@ -92,11 +94,9 @@ class ApiController {
             : "Já existe um cadastro com este SKU, código de barras, IMEI, série, nome ou e-mail.",
         });
       else if (code === "55000")
-        res
-          .status(409)
-          .json({
-            error: "Filial inativa ou indisponível. Reative-a antes de operar.",
-          });
+        res.status(409).json({
+          error: "Filial inativa ou indisponível. Reative-a antes de operar.",
+        });
       else if (code === "23503")
         res
           .status(400)
@@ -684,6 +684,51 @@ class ApiController {
         ),
       }));
     }
+    if (path === "/fiscal/overview" && method === "GET")
+      return this.fiscal.overview(i, req.query);
+    if (path === "/fiscal/products" && method === "GET")
+      return this.fiscal.products(i, req.query);
+    if (path === "/fiscal/sources" && method === "GET")
+      return this.fiscal.sources(i, req.query);
+    if (path === "/fiscal/drafts" && method === "GET")
+      return this.fiscal.drafts(i, req.query);
+    if (path === "/fiscal/drafts" && method === "POST")
+      return this.fiscal.prepare(i, body, key);
+    if (path === "/fiscal/files" && method === "GET")
+      return this.fiscal.files(i, req.query);
+    if (path === "/fiscal/files" && method === "POST")
+      return this.fiscal.upload(i, body, key);
+    const fiscalRoute = path.match(
+      /^\/fiscal\/(issuers|products|drafts|files|certificates)\/([\w-]+)(?:\/(archive|emit|cancel|query|remove))?$/,
+    );
+    if (fiscalRoute) {
+      const [, resource, raw, action] = fiscalRoute,
+        id = validate(uuid, raw);
+      if (resource === "issuers" && !action && method === "POST")
+        return this.fiscal.saveIssuer(i, id, body, key);
+      if (resource === "products" && !action && method === "POST")
+        return this.fiscal.saveProduct(i, id, body, key);
+      if (resource === "certificates" && !action && method === "POST")
+        return this.fiscal.certificate(i, id, body, key);
+      if (
+        resource === "certificates" &&
+        action === "remove" &&
+        method === "POST"
+      )
+        return this.fiscal.removeCertificate(i, id, body, key);
+      if (resource === "drafts") {
+        if (!action && method === "GET") return this.fiscal.detail(i, id);
+        if (action === "archive" && method === "POST")
+          return this.fiscal.archive(i, id, body, key);
+        if (
+          ["emit", "cancel", "query"].includes(action || "") &&
+          method === "POST"
+        )
+          return this.fiscal.unavailable(i, id);
+      }
+      if (resource === "files" && !action && method === "GET")
+        return this.fiscal.file(i, id);
+    }
     if (path === "/branches" && method === "GET")
       return this.branches.list(i, req.query);
     if (path === "/branches" && method === "POST")
@@ -761,6 +806,10 @@ export async function createApp(db: Database) {
     controllers: [ApiController],
     providers: [
       {
+        provide: FiscalService,
+        useValue: new FiscalService(db, new InventoryService(db)),
+      },
+      {
         provide: BranchesService,
         useValue: new BranchesService(db, new InventoryService(db)),
       },
@@ -800,6 +849,7 @@ export async function createApp(db: Database) {
     bodyParser: false,
   });
   const express = await import("express");
+  const certificateJson = express.json({ limit: "400kb" });
   const normalJson = express.json({ limit: "128kb" }),
     photoJson = express.json({ limit: "8mb" });
   app.use(
@@ -808,7 +858,10 @@ export async function createApp(db: Database) {
         req.method === "POST" &&
         /^\/api\/repairs\/[\w-]+\/photos$/.test(req.path)
           ? photoJson
-          : normalJson;
+          : req.method === "POST" &&
+              /^\/api\/fiscal\/certificates\/[\w-]+$/.test(req.path)
+            ? certificateJson
+            : normalJson;
       parser(req, res, next);
     },
   );

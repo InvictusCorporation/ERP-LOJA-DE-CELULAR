@@ -46,6 +46,7 @@ import CrmPanel from "./crm-panel";
 import FinancePanel from "./finance-panel";
 import CreditPanel from "./credit-panel";
 import ProductBarcode, { ProductStockControl } from "./product-fields";
+import FiscalPanel from "./fiscal-panel";
 import BranchesPanel from "./branches-panel";
 import EmployeesPanel from "./employees-panel";
 import ReportsPanel from "./reports-panel";
@@ -109,6 +110,7 @@ const nav = [
   { id: "reports", label: "Relatórios gerenciais", icon: ChartNoAxesCombined },
   { id: "employees", label: "Funcionários e permissões", icon: UsersRound },
   { id: "branches", label: "Gestão de filiais", icon: Building2 },
+  { id: "fiscal", label: "Gestão fiscal", icon: ShieldCheck },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -703,7 +705,8 @@ export default function App() {
                 (n.id !== "purchases" || can("purchase_read")) &&
                 (n.id !== "reports" || can("reports_read")) &&
                 (n.id !== "employees" || can("users")) &&
-                (n.id !== "branches" || can("branch_read")),
+                (n.id !== "branches" || can("branch_read")) &&
+                (n.id !== "fiscal" || can("fiscal_read")),
             )
             .map((n) => (
               <button
@@ -719,7 +722,7 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 a 10 ativos
+            <span className="status-dot" /> Gestão integrada da loja
             <small>
               Estoque, PDV, Assistência, CRM, Financeiro, Crediário, Compras,
               Relatórios, Funcionários e Filiais
@@ -795,6 +798,8 @@ export default function App() {
                     crm: "Clientes, históricos e próximos passos do atendimento.",
                     finance:
                       "Recebimentos, pagamentos e resultados da sua operação.",
+                    fiscal:
+                      "Dados fiscais, documentos preparados e arquivos da filial.",
                     branches:
                       "Unidades, estoques e transferências com conferência.",
                     employees: "Equipe, funções e acesso por filial.",
@@ -904,6 +909,15 @@ export default function App() {
                   branch={branch}
                   branches={me.branches}
                   companyName={me.tenant.name}
+                  mutate={mutate}
+                  onNotice={show}
+                />
+              )}
+              {view === "fiscal" && can("fiscal_read") && (
+                <FiscalPanel
+                  key={branch}
+                  branch={branch}
+                  permissions={me.permissions}
                   mutate={mutate}
                   onNotice={show}
                 />
@@ -1548,7 +1562,8 @@ export default function App() {
                         <dd>
                           1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM / 5
                           · Financeiro / 6 · Crediário próprio / 7 · Compras / 8
-                          · Relatórios / 9 · Funcionários / 10 · Filiais
+                          · Relatórios / 9 · Funcionários / 10 · Filiais / 11 ·
+                          Fiscal (preparação)
                         </dd>
                       </dl>
                     </section>

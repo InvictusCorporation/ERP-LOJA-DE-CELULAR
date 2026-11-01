@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 10
+# Arquitetura — módulos 1 a 11 (preparação fiscal)
 
 ## Componentes
 
@@ -49,7 +49,7 @@ Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, um módulo autorizado
 8. Relatórios — implementado: séries diária/mensal, margens, ticket, produtos, equipe, serviços, posição atual de estoque/crédito e comparativos por filial.
 9. Funcionários e Permissões — implementado: extensão dos vínculos existentes com cargo, função, filial, perfis, exceções individuais, histórico, inativação/reativação e contrato cadastral para o ponto.
 10. Filiais — implementado: cadastro versionado, visão da unidade, transferências de mercadorias, correção bilateral, inativação controlada, resultados individuais/consolidados e atalhos para os módulos existentes.
-11. Fiscal — futuro; integração homologada com provedor.
+11. Fiscal — preparação implementada: emitente por filial, classificação, A1 cifrado, snapshots de vendas/mão de obra e arquivo XML não verificado; integração/emissão oficial e homologação pendentes.
 12. Ponto — futuro; reutilização do projeto existente e contratação independente.
 
 ## Compras e fornecedores
@@ -152,3 +152,10 @@ Transferência confirmada representa saída e recebimento já conferidos, em uma
 Inativação usa trava por empresa e bloqueio da linha da filial, verifica pendências e mantém ao menos uma unidade ativa. Triggers de operação usam FOR SHARE nas filiais antiga/nova, coordenando escrita e inativação, inclusive para requisições vindas de tela antiga. Contemplam saldos/unidades/movimentos, caixas/PDV, ordens, financeiro, crediário, compras e pendências de CRM; eventos comerciais do CRM com filial também verificam filial ativa sob bloqueio compartilhado. Metadados do cadastro, consultas e logs de acesso a documentos continuam possíveis. Uma transação já iniciada que tenha obtido o bloqueio compartilhado conclui antes da decisão de inativar, cujas consultas seguintes enxergam seus dados confirmados.
 
 Antes de inativar, exige-se ausência de estoque disponível, caixas abertos, ordens ainda não entregues, compras em rascunho/confirmadas/parciais, pendências CRM, ofertas de crédito ainda vigentes, títulos abertos/a conferir, contas ativas/com saldo e movimentos financeiros sem conta. Funcionários ativos não podem manter essa filial como trabalho principal nem como único acesso ativo. Encerrar filial não altera seus documentos antigos nem apaga permissões históricas. A ligação fiscal, remessas, trânsito com recebimento parcial e customização comercial de subdomínios não são implementados nesta etapa.
+
+
+## Preparação fiscal (módulo 11)
+
+Migração 14 cria emissores e classificações JSON versionados, preparações imutáveis vinculadas às origens, arquivamento por evento e arquivos XML inertes com hash. Usa o estoque/PDV/assistência existentes e não gera lançamentos comerciais. Uma preparação por origem, inclusive arquivada, até implementação de revisão/substituição. Estado corrente da origem aparece separado do snapshot. Apenas formatos são validados; tributação e campos completos do emissor permanecem pendentes.
+
+A1 e senha são cifrados juntos em AES-256-GCM, AAD por empresa/filial, chave externa ao banco. Rotas nunca retornam ciphertext, senha ou certificado; permitem metadados, substituição e remoção versionadas, reservadas ao proprietário. Local usa arquivo ignorado e companheiro de backup; produção exige chave injetada. Remoção elimina o pacote ativo e incrementa versão para impedir sobrescrita por tela antiga. XML UTF-8 é arquivado em base64 para preservar bytes/BOM, conferido por tamanho/hash e baixado como arquivo, sem parser nem execução e sem autenticação fiscal. Direitos fiscal_read/manage/settings usam o modelo compartilhado de permissões. Emissão/consulta/cancelamento oficiais estão bloqueados por ausência de adaptador homologado.
