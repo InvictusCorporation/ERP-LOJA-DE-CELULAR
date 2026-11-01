@@ -46,6 +46,7 @@ import CrmPanel from "./crm-panel";
 import FinancePanel from "./finance-panel";
 import CreditPanel from "./credit-panel";
 import ProductBarcode, { ProductStockControl } from "./product-fields";
+import ReportsPanel from "./reports-panel";
 import PurchasesPanel from "./purchases-panel";
 
 type Row = Record<string, any>;
@@ -102,6 +103,7 @@ const nav = [
   { id: "finance", label: "Gestão financeira", icon: ChartNoAxesCombined },
   { id: "credit", label: "Crediário próprio", icon: ShieldCheck },
   { id: "purchases", label: "Compras e fornecedores", icon: Package },
+  { id: "reports", label: "Relatórios gerenciais", icon: ChartNoAxesCombined },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -706,7 +708,8 @@ export default function App() {
                 (n.id !== "crm" || can("crm_read")) &&
                 (n.id !== "finance" || can("finance_read")) &&
                 (n.id !== "credit" || can("credit_read")) &&
-                (n.id !== "purchases" || can("purchase_read")),
+                (n.id !== "purchases" || can("purchase_read")) &&
+                (n.id !== "reports" || can("reports_read")),
             )
             .map((n) => (
               <button
@@ -722,9 +725,9 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 a 7 ativos
+            <span className="status-dot" /> Módulos 1 a 8 ativos
             <small>
-              Estoque, PDV, Assistência, CRM, Financeiro, Crediário e Compras
+              Estoque, PDV, Assistência, CRM, Financeiro, Crediário, Compras e Relatórios
             </small>
           </div>
           <button
@@ -797,6 +800,8 @@ export default function App() {
                     crm: "Clientes, históricos e próximos passos do atendimento.",
                     finance:
                       "Recebimentos, pagamentos e resultados da sua operação.",
+                    reports:
+                      "Indicadores e comparativos para acompanhar sua loja.",
                     purchases:
                       "Pedidos, conferência de entregas e reposição integrados ao financeiro.",
                     credit:
@@ -903,6 +908,14 @@ export default function App() {
                   companyName={me.tenant.name}
                   mutate={mutate}
                   onNotice={show}
+                />
+              )}
+              {view === "reports" && can("reports_read") && (
+                <ReportsPanel
+                  key={branch}
+                  branch={branch}
+                  branches={me.branches}
+                  companyName={me.tenant.name}
                 />
               )}
               {view === "overview" && (
@@ -1510,7 +1523,8 @@ export default function App() {
                         <dt>Módulos disponíveis</dt>
                         <dd>
                           1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM / 5
-                          · Financeiro / 6 · Crediário próprio / 7 · Compras
+                          · Financeiro / 6 · Crediário próprio / 7 · Compras / 8
+                          · Relatórios
                         </dd>
                       </dl>
                     </section>

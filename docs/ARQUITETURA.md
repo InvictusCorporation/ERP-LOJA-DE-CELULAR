@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 7
+# Arquitetura — módulos 1 a 8
 
 ## Componentes
 
@@ -111,3 +111,14 @@ Triggers com privilégios do chamador e RLS gravam os recebimentos/devoluções 
 Ledger e baixas aceitam somente SELECT/INSERT na role de runtime. Estornos são lançamentos compensatórios; versões e bloqueios de título impedem baixa em excesso. Conciliação tem conta, valor exato, data e referência conferidos manualmente. Bloqueios transacionais consultivos serializam conciliação e estorno sem conceder UPDATE ao ledger. Desfazer só altera as colunas de vigência da conciliação, preservando conta e referência originais. Eventos e auditoria registram responsáveis e justificativas.
 
 Proprietário e gerente têm acesso; relatórios, contas e movimentos respeitam filiais autorizadas. Consolidação reúne somente essas filiais, com RLS por empresa e chaves compostas. Não há integração bancária automática, cobrança ou transmissão de dinheiro. Credenciadoras, fiscal, crediário e relatórios gerais permanecem nas etapas correspondentes. PostgreSQL externo e recuperação na infraestrutura de produção ainda precisam de homologação.
+
+
+## Relatórios gerenciais — módulo 8
+
+A API GET /reports/{overview,products,stagnant,sellers,technicians,services,credit} é somente leitura. ReportsService exige reports_read (proprietário/gerente), valida a seleção de filiais contra a identidade e consulta sob a role com RLS por empresa. Nenhum endpoint cria snapshots ou altera saldos. Parâmetros são vinculados; ordenação usa lista permitida. Períodos válidos entre 2000 e 2199, sem futuro, limitados a 366 dias inclusivos; tabelas usam páginas de 30 registros e limite de consulta de 10 segundos.
+
+Financeiro e relatórios compartilham financialFactsCte e financialResult, preservando competência, custos históricos, compensações e receitas do crediário. A visão consolidada consulta fatos e coorte de vendas em uma única instrução SQL e deriva resumo, séries diária/mensal e filiais desse mesmo conjunto. Inteiros consolidados fora do limite seguro são recusados. Margem/ticket sem denominador positivo ficam sem valor, em vez de infinito.
+
+Estoque parado e crédito representam posição atual, com data de referência separada do período. Não há reconstrução histórica desses saldos. As abas são consultas independentes; Atualizar consulta a situação mais recente. O frontend mantém filtros em edição separados dos filtros aplicados, descarta respostas de consultas substituídas e desabilita exportação/impressão durante carregamento ou erro. CSV protege células textuais contra fórmulas; a impressão é renderizada diretamente no body, com cabeçalho e critérios aplicados.
+
+A migração 202611010011_reports acrescenta somente índices de consulta. Não modifica tabelas de negócio nem migrações anteriores. Homologação de carga e planos no PostgreSQL externo ainda é necessária para produção.

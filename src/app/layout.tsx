@@ -3,7 +3,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Invictus ERP Mobile · Gestão da loja",
   description:
-    "Estoque, PDV, assistência, CRM, financeiro, crediário e compras integrados por filial.",
+    "Estoque, PDV, assistência, CRM, financeiro, crediário, compras e relatórios integrados por filial.",
 };
 export default function RootLayout({
   children,

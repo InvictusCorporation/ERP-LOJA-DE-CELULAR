@@ -77,10 +77,26 @@ test("Crediário: aprovação, venda, antecipação, renegociação, cobrança e
   }
   const detail = () => ok("/credit/contracts/" + contract),
     version = async () => (await detail()).contract.version;
-  const report = () =>
-    ok(
-      `/finance/reports?branch_id=all&start=${today.slice(0, 7)}-01&end=${today}`,
+  const report = async () => {
+    const path =
+      "?branch_id=all&start=" + today.slice(0, 7) + "-01&end=" + today;
+    const finance = await ok("/finance/reports" + path);
+    const management = await ok("/reports/overview" + path);
+    for (const [key, value] of Object.entries(finance.result))
+      assert.equal(management.summary[key], value, key);
+    const credit = await ok("/reports/credit?branch_id=all");
+    assert.equal(
+      credit.items.reduce((n: number, x: any) => n + x.open, 0),
+      Number(finance.outstanding.receivable),
     );
+    assert.equal(
+      credit.items.reduce((n: number, x: any) => n + x.overdue, 0),
+      Number(finance.outstanding.overdue_receivable),
+    );
+    for (const x of credit.items)
+      assert.equal(x.age_30 + x.age_60 + x.age_90 + x.age_over_90, x.overdue);
+    return finance;
+  };
   const balance = async () =>
     Number(
       (await ok("/finance/config?branch_id=all")).accounts.find(
@@ -539,6 +555,39 @@ test("Crediário: aprovação, venda, antecipação, renegociação, cobrança e
         assert.equal(await balance(), before);
         const open = await report();
         assert.equal(Number(open.outstanding.receivable), 35000);
+      },
+    );
+    await t.test(
+      "relatório de inadimplência respeita limites das faixas e vencimento de hoje",
+      async () => {
+        const d = await detail(),
+          x = d.items[0];
+        for (const [days, key] of [
+          [0, null],
+          [1, "age_30"],
+          [30, "age_30"],
+          [31, "age_60"],
+          [60, "age_60"],
+          [61, "age_90"],
+          [90, "age_90"],
+          [91, "age_over_90"],
+        ] as [number, string | null][]) {
+          await db.system(
+            "UPDATE finance_titles SET due_on=$2 WHERE credit_installment_id=$1",
+            [x.id, addDays(today, -days)],
+          );
+          const r = await ok("/reports/credit?branch_id=all"),
+            summary = r.summary;
+          assert.equal(summary.open, 35000);
+          assert.equal(summary.overdue, key ? 17500 : 0);
+          for (const bucket of ["age_30", "age_60", "age_90", "age_over_90"])
+            assert.equal(summary[bucket], bucket === key ? 17500 : 0);
+          assert.equal(summary.delinquency, key ? 50 : 0);
+        }
+        await db.system(
+          "UPDATE finance_titles SET due_on=$2 WHERE credit_installment_id=$1",
+          [x.id, x.due_on],
+        );
       },
     );
     await t.test(
