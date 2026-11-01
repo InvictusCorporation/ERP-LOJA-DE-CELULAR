@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 11 (preparação fiscal)
+# Arquitetura — módulos 1 a 12 (integrações preparadas)
 
 ## Componentes
 
@@ -50,7 +50,7 @@ Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, um módulo autorizado
 9. Funcionários e Permissões — implementado: extensão dos vínculos existentes com cargo, função, filial, perfis, exceções individuais, histórico, inativação/reativação e contrato cadastral para o ponto.
 10. Filiais — implementado: cadastro versionado, visão da unidade, transferências de mercadorias, correção bilateral, inativação controlada, resultados individuais/consolidados e atalhos para os módulos existentes.
 11. Fiscal — preparação implementada: emitente por filial, classificação, A1 cifrado, snapshots de vendas/mão de obra e arquivo XML não verificado; integração/emissão oficial e homologação pendentes.
-12. Ponto — futuro; reutilização do projeto existente e contratação independente.
+12. Ponto — preparação implementada: destino por empresa, vínculos de filiais, diagnóstico dos funcionários existentes e pacotes JSON auditados; adaptador, autenticação, habilitação e homologação com o projeto existente pendentes.
 
 ## Compras e fornecedores
 
@@ -159,3 +159,12 @@ Antes de inativar, exige-se ausência de estoque disponível, caixas abertos, or
 Migração 14 cria emissores e classificações JSON versionados, preparações imutáveis vinculadas às origens, arquivamento por evento e arquivos XML inertes com hash. Usa o estoque/PDV/assistência existentes e não gera lançamentos comerciais. Uma preparação por origem, inclusive arquivada, até implementação de revisão/substituição. Estado corrente da origem aparece separado do snapshot. Apenas formatos são validados; tributação e campos completos do emissor permanecem pendentes.
 
 A1 e senha são cifrados juntos em AES-256-GCM, AAD por empresa/filial, chave externa ao banco. Rotas nunca retornam ciphertext, senha ou certificado; permitem metadados, substituição e remoção versionadas, reservadas ao proprietário. Local usa arquivo ignorado e companheiro de backup; produção exige chave injetada. Remoção elimina o pacote ativo e incrementa versão para impedir sobrescrita por tela antiga. XML UTF-8 é arquivado em base64 para preservar bytes/BOM, conferido por tamanho/hash e baixado como arquivo, sem parser nem execução e sem autenticação fiscal. Direitos fiscal_read/manage/settings usam o modelo compartilhado de permissões. Emissão/consulta/cancelamento oficiais estão bloqueados por ausência de adaptador homologado.
+
+
+## Preparação da integração de ponto (módulo 12)
+
+Migração 15 cria point_settings por empresa, point_branch_mappings por filial e point_preparation_exports imutáveis, com RLS. Não cria funcionários nem tabelas de marcação/jornada. O contrato individual do módulo 9 foi extraído para função compartilhada sem alterar seu formato. O primeiro acesso agora preenche nome/filial funcional do proprietário; registros antigos incompletos são exibidos como pendência no ponto. A leitura funcional de memberships sempre filtra tenant explicitamente.
+
+point_read depende de users; point_export depende da consulta; point_settings é reservada ao proprietário. Administrador consulta e exporta seu escopo, sem configurar destino/filiais. Todo funcionário exportado precisa ter todas as filiais no acesso do ator. Downloads conferem o escopo histórico inteiro novamente, hash e direito atual. Pacote lê configuração, mapeamentos e funcionários no mesmo snapshot SQL, persiste conteúdo/auditoria atomicamente e limita a 500 sem truncar.
+
+URL HTTPS e ambiente são apenas metadados sem credenciais nem tráfego. Status desconectado, assinatura não verificada, marcações e última sincronização nulas. Portas de adaptador internas são uma proposta sem implementação. Não há fila, webhook ou promessa de compatibilidade com o provedor. O contrato, a política de troca de destino, o transporte e a habilitação comercial dependem da análise do projeto existente, que continuará independente do ERP. Ver docs/INTEGRACAO-PONTO.md.

@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:invictus:erp:point-preparation:v1",
+  "title": "Proposta ERP de pacote cadastral para revisão de integração de ponto",
+  "description": "Sem envio ou validade de documento de jornada. Contrato do provedor não validado.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "purpose": {
+      "const": "employee_mapping_review"
+    },
+    "source": {
+      "const": "invictus_erp_mobile"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "configuration_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider_name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "base_url": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "external_tenant_id": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "environment": {
+          "enum": [
+            "sandbox",
+            "production"
+          ]
+        }
+      },
+      "required": [
+        "provider_name",
+        "base_url",
+        "external_tenant_id",
+        "environment"
+      ]
+    },
+    "scope_branch_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "branches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "external_branch_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mapping_version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "branch_version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "branch_id",
+          "name",
+          "active",
+          "external_branch_id",
+          "mapping_version",
+          "branch_version"
+        ]
+      }
+    },
+    "employees": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "employee_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "external_employee_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "employee_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "job_title": {
+            "type": "string"
+          },
+          "job_function": {
+            "type": "string"
+          },
+          "home_branch_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "branch_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "integration_status": {
+            "const": "mapping_only"
+          },
+          "attendance": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tenant_id",
+          "employee_id",
+          "user_id",
+          "external_employee_id",
+          "name",
+          "employee_code",
+          "job_title",
+          "job_function",
+          "home_branch_id",
+          "branch_ids",
+          "active",
+          "version",
+          "integration_status",
+          "attendance"
+        ]
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "local_mapping_complete": {
+          "type": "boolean"
+        },
+        "blocking": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "configuration_fields": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "provider_name",
+                  "base_url",
+                  "external_tenant_id"
+                ]
+              }
+            },
+            "branches_without_mapping": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "employees_without_mapping": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "employees_without_home_branch": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "over_export_limit": {
+              "type": "boolean"
+            },
+            "no_branches": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "configuration_fields",
+            "branches_without_mapping",
+            "employees_without_mapping",
+            "employees_without_home_branch",
+            "over_export_limit",
+            "no_branches"
+          ]
+        }
+      },
+      "required": [
+        "local_mapping_complete",
+        "blocking"
+      ]
+    },
+    "integration_status": {
+      "const": "not_connected"
+    },
+    "provider_contract": {
+      "const": "unverified"
+    },
+    "subscription_status": {
+      "const": "not_verified"
+    },
+    "attendance": {
+      "type": "null"
+    }
+  },
+  "required": [
+    "schema_version",
+    "purpose",
+    "source",
+    "tenant_id",
+    "generated_at",
+    "configuration_version",
+    "target",
+    "scope_branch_ids",
+    "branches",
+    "employees",
+    "readiness",
+    "integration_status",
+    "provider_contract",
+    "subscription_status",
+    "attendance"
+  ]
+}

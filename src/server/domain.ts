@@ -194,8 +194,8 @@ export class InventoryService {
         [branch, tenant, b.branch],
       );
       await tx.query(
-        "INSERT INTO memberships(id,tenant_id,user_id,role,branch_ids) VALUES($1,$2,$3,'owner',$4::uuid[]) RETURNING id",
-        [randomUUID(), tenant, user, [branch]],
+        "INSERT INTO memberships(id,tenant_id,user_id,role,branch_ids,employee_name,home_branch_id) VALUES($1,$2,$3,'owner',$4::uuid[],$5,$6) RETURNING id",
+        [randomUUID(), tenant, user, [branch], b.name, branch],
       );
       await audit(
         tx,

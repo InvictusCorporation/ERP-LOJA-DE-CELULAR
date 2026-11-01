@@ -1,6 +1,6 @@
 # Invictus ERP Mobile
 
-Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores**, **8 — Relatórios Gerenciais**, **9 — Funcionários e Permissões**, **10 — Gestão de Filiais** e **11 — Gestão Fiscal (preparação)**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. O módulo 11 possui cadastro/preparação e cofre A1; emissão oficial depende de integração e homologação. O módulo 12 ainda não está implementado. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
+Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores**, **8 — Relatórios Gerenciais**, **9 — Funcionários e Permissões**, **10 — Gestão de Filiais**, **11 — Gestão Fiscal (preparação)** e **12 — Ponto e Frequência (integração preparada)**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. O módulo 11 possui cadastro/preparação e cofre A1; emissão oficial depende de integração e homologação. O módulo 12 prepara destino, vínculos e pacotes cadastrais; conexão e frequência dependem do projeto de ponto existente. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
 ## Executar localmente
 
@@ -148,7 +148,7 @@ O tempo dos técnicos mede dias corridos até conclusão, incluindo espera, sem 
 4. Administradores gerem funcionários comuns somente dentro de seu acesso completo e sem conceder direitos que não possuem. Apenas o proprietário gere administradores. Não se pode retirar o próprio acesso nem rebaixar/inativar o proprietário pelo ERP.
 5. Para mudar um cadastro, informe o motivo. As sessões anteriores daquele funcionário nesta empresa são encerradas; ele precisa entrar novamente. A inativação preserva vendas, serviços e histórico. Caixas abertos e pendências atribuídas precisam ser encerrados ou reatribuídos antes da perda de acesso correspondente.
 6. Consulte **Histórico de operações**, filtre ativos/inativos e exporte o CSV da página atual (até 30 registros).
-7. Para preparar o ponto, informe o identificador externo e use **Exportar vínculo do ponto**. O JSON inclui os IDs estáveis do vínculo/usuário, empresa, filial, situação e versão. Não envia dados, não contém jornada e não sincroniza frequência. A conexão com o projeto existente será tratada no módulo 12, após disponibilização de seu repositório.
+7. Para preparar o ponto, informe o identificador externo e use **Exportar vínculo do ponto**. O JSON inclui os IDs estáveis do vínculo/usuário, empresa, filial, situação e versão. Não envia dados, não contém jornada e não sincroniza frequência. O painel Ponto e frequência do módulo 12 prepara o destino, as filiais e os pacotes para revisão; a conexão depende da disponibilização do projeto existente.
 
 Nome, cargo e função são específicos da empresa. Alterações não modificam a identidade global de uma conta compartilhada nem seus acessos em outra empresa. E-mail e senha existentes continuam sob administração da central.
 
@@ -173,3 +173,12 @@ Abra **Gestão fiscal → Emitente e certificado**. Selecione o estado, porte (M
 Em **Classificação dos produtos**, preencha referências fiscais com a contabilidade. Em **Vendas e serviços**, prepare NF-e/NFC-e a partir de vendas concluídas ou NFS-e da mão de obra de serviços reparados e entregues. Consulte o snapshot, exporte JSON ou arquive a preparação. **Arquivo XML** guarda arquivos não verificados, sem interpretar ou declarar autenticidade. Preparações e XML importado não comprovam emissão nem cancelamento.
 
 **Emissão oficial permanece pendente de integração/homologação.** O cadastro atual é preliminar, não calcula tributos e não cobre todos os campos de um emissor. Veja [entrega e recuperação do cofre do módulo 11](docs/ENTREGA-MODULO-11.md). Em produção configure a chave do cofre fora do Git; em backup local preserve o arquivo companheiro da chave.
+
+
+## Preparar integração de ponto
+
+Abra **Ponto e frequência**. O proprietário registra o sistema, URL HTTPS sem credenciais, identificador externo da empresa e ambiente pretendido. Esses campos documentam a preparação; nenhum endereço é acessado e selecionar produção não ativa a conexão. Em **Vínculos das filiais**, informe a identificação de cada unidade no ponto. Em **Vínculos dos funcionários**, confira a equipe existente e use o atalho para preencher o identificador no cadastro do módulo 9.
+
+Em **Pacotes preparados**, salve e baixe JSON de revisão, com até 500 funcionários integralmente dentro do seu acesso, incluindo inativos e pendências. A lista pesquisada/paginada não limita o conteúdo. O arquivo preserva seu retrato original e não contém e-mails, senhas, permissões ou jornada. Somente proprietário/administrador com os direitos correspondentes consultam/preparam; configuração e vínculos de filial são reservados ao proprietário.
+
+**A integração permanece desconectada.** Não há marcações, apuração, frequência, envio, habilitação comercial ou conformidade legal presumida. Falta analisar o projeto existente e implementar/homologar o adaptador. Veja [entrega do módulo 12](docs/ENTREGA-MODULO-12.md), [contrato proposto](docs/INTEGRACAO-PONTO.md) e [JSON Schema](docs/contracts/point-mapping-v1.schema.json).

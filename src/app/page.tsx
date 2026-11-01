@@ -46,6 +46,7 @@ import CrmPanel from "./crm-panel";
 import FinancePanel from "./finance-panel";
 import CreditPanel from "./credit-panel";
 import ProductBarcode, { ProductStockControl } from "./product-fields";
+import PointPanel from "./point-panel";
 import FiscalPanel from "./fiscal-panel";
 import BranchesPanel from "./branches-panel";
 import EmployeesPanel from "./employees-panel";
@@ -111,6 +112,7 @@ const nav = [
   { id: "employees", label: "Funcionários e permissões", icon: UsersRound },
   { id: "branches", label: "Gestão de filiais", icon: Building2 },
   { id: "fiscal", label: "Gestão fiscal", icon: ShieldCheck },
+  { id: "point", label: "Ponto e frequência", icon: UsersRound },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -706,7 +708,8 @@ export default function App() {
                 (n.id !== "reports" || can("reports_read")) &&
                 (n.id !== "employees" || can("users")) &&
                 (n.id !== "branches" || can("branch_read")) &&
-                (n.id !== "fiscal" || can("fiscal_read")),
+                (n.id !== "fiscal" || can("fiscal_read")) &&
+                (n.id !== "point" || can("point_read")),
             )
             .map((n) => (
               <button
@@ -798,6 +801,8 @@ export default function App() {
                     crm: "Clientes, históricos e próximos passos do atendimento.",
                     finance:
                       "Recebimentos, pagamentos e resultados da sua operação.",
+                    point:
+                      "Prepare os vínculos com o controle de ponto da empresa.",
                     fiscal:
                       "Dados fiscais, documentos preparados e arquivos da filial.",
                     branches:
@@ -920,6 +925,14 @@ export default function App() {
                   permissions={me.permissions}
                   mutate={mutate}
                   onNotice={show}
+                />
+              )}
+              {view === "point" && can("point_read") && (
+                <PointPanel
+                  permissions={me.permissions}
+                  mutate={mutate}
+                  onNotice={show}
+                  onEmployees={() => navigate("employees")}
                 />
               )}
               {view === "branches" && can("branch_read") && (
@@ -1563,7 +1576,8 @@ export default function App() {
                           1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM / 5
                           · Financeiro / 6 · Crediário próprio / 7 · Compras / 8
                           · Relatórios / 9 · Funcionários / 10 · Filiais / 11 ·
-                          Fiscal (preparação)
+                          Fiscal (preparação) / 12 · Ponto (integração
+                          preparada)
                         </dd>
                       </dl>
                     </section>
