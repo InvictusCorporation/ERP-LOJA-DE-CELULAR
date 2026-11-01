@@ -79,3 +79,16 @@ Antes dos índices da migração 202611010011_reports, a API local foi parada e 
 Após atualizar, confira a mesma empresa/filial/período em Gestão financeira e Relatórios gerenciais. O resultado DRE deve coincidir. Faturamento operacional exclui receitas manuais e do crediário, que aparecem no resultado DRE. Compare uma devolução e seu custo compensatório no dia da devolução. Confira ticket com venda parcialmente e integralmente devolvida. Estoque parado e inadimplência são posições atuais, e não saldos na data final do período.
 
 Relatórios não alteram operações. Para corrigir um número, corrija sua origem pelo fluxo autorizado e atualize a consulta. Custos de catálogo não reescrevem custos históricos do PDV. Resultados CSV/impressos refletem a consulta identificada no cabeçalho; exportação paginada não equivale à base inteira. Preserve os arquivos com acesso restrito, pois incluem valores comerciais, nomes de funcionários e desempenho.
+
+
+## Atualização do módulo 9
+
+Migração 202611010012_employees, aplicada após as anteriores sem editá-las. Cópia offline anterior em backups/pre-modulo9-20261101/invictus, fora do Git. A migração amplia memberships, preserva os vínculos/perfis e preenche nome/filial inicial dos usuários anteriores. Verifique duplicidades de identificação caso a central já importe matrículas em uma implantação futura. Backups continuam incluindo usuários, vínculos, sessões, permissões e auditoria; devem permanecer privados.
+
+Antes de alterar acessos, confira a filial de trabalho, todas as filiais autorizadas e a coluna de acesso efetivo. A permissão de custo do estoque é diferente do acesso a custos históricos do PDV, custos da assistência e DRE financeira; revise os respectivos direitos. Gestão de usuários e política de crédito são reservadas a perfis. A simples ocultação do menu não substitui a autorização do servidor.
+
+Mudanças de cadastro encerram sessões do funcionário nessa empresa, salvo edição do próprio perfil pessoal protegido. Inativação não exclui dados. Feche o caixa ou reatribua/encerre ordens e pendências comerciais antes de retirar o respectivo acesso; não altere saldos ou responsáveis diretamente no banco. Para reativar, atualize o vínculo e peça novo login; sessões revogadas não voltam a valer. Contas globais inativas dependem da central.
+
+Em produção, novas contas permanecem no provisionamento administrativo. A role runtime só ganha UPDATE nas colunas funcionais e de acesso do vínculo, sob RLS de escrita por empresa, sem INSERT de identidades ou mudança de credenciais globais. Homologue essas permissões, sessões, concorrência e recuperação no PostgreSQL externo. Não houve alteração em VPS ou em projetos externos.
+
+O vínculo exportado para ponto não estabelece conexão nem registra jornada. Valide o contrato com o projeto existente antes de implementar sincronização no módulo 12. Matrícula/ID externo não substituem validação de empresa, autorização, versão, integridade e política de sincronização do futuro adaptador. Não foram adicionadas credenciais, URLs ou regras de ponto fictícias.

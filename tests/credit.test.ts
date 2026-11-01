@@ -431,6 +431,57 @@ test("Crediário: aprovação, venda, antecipação, renegociação, cobrança e
       },
     );
     await t.test(
+      "documento de crediário respeita bloqueio individual, inclusive em gerente",
+      async () => {
+        const rows = await ok("/employees?branch_id=all");
+        const manager = rows.items.find(
+          (e: any) => e.email === "credit-manager@test.local",
+        );
+        const fields = [
+          "name",
+          "job_title",
+          "job_function",
+          "employee_code",
+          "home_branch_id",
+          "point_external_id",
+          "role",
+          "active",
+          "branch_ids",
+          "permission_grants",
+          "permission_denials",
+          "version",
+        ];
+        const body: any = {};
+        for (const field of fields) body[field] = manager[field];
+        body.reason = "Restrição individual em cenário de teste";
+        body.permission_denials = ["credit_read", "credit_sell"];
+        await ok("/employees/" + manager.id, "PUT", body);
+        await auth("manager");
+        assert.equal(
+          (
+            await api(
+              "/credit/contracts/" + contract + "/document",
+              "GET",
+              undefined,
+              "manager",
+            )
+          ).status,
+          403,
+        );
+        assert.equal(
+          (
+            await api(
+              "/credit/contracts/" + contract + "/document",
+              "GET",
+              undefined,
+              "cash",
+            )
+          ).status,
+          200,
+        );
+      },
+    );
+    await t.test(
       "antecipação parcial reduz juros e gera uma única baixa no financeiro",
       async () => {
         bank = (

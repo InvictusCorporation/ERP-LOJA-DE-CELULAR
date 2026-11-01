@@ -89,7 +89,7 @@ export function validate<T>(schema: z.ZodType<T>, value: unknown): T {
   return r.data;
 }
 export function permit(identity: Identity, right: string) {
-  if (!permissions(identity.role).includes(right))
+  if (!permissions(identity).includes(right))
     fail(403, "Você não tem permissão para esta operação.");
 }
 export function branchAccess(i: Identity, branch: string) {
@@ -217,7 +217,7 @@ export class InventoryService {
     FROM products p LEFT JOIN stock_balances s ON s.product_id=p.id AND s.tenant_id=p.tenant_id AND s.branch_id=$1 WHERE p.active`,
         [branch],
       );
-      if (!permissions(i.role).includes("cost")) {
+      if (!permissions(i).includes("cost")) {
         delete metrics.cost_value;
         delete metrics.sale_value;
       }
@@ -246,8 +246,7 @@ export class InventoryService {
     ORDER BY p.created_at DESC,p.id LIMIT 30 OFFSET $4`,
         [branch, `%${q.slice(0, 100)}%`, archived, (page - 1) * 30],
       );
-      if (!permissions(i.role).includes("cost"))
-        rows.forEach((p) => delete p.cost);
+      if (!permissions(i).includes("cost")) rows.forEach((p) => delete p.cost);
       return { items: rows, total: rows[0]?.total || 0, page };
     });
   }

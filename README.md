@@ -1,6 +1,6 @@
 # Invictus ERP Mobile
 
-Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores** e **8 — Relatórios Gerenciais**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 9–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
+Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores**, **8 — Relatórios Gerenciais** e **9 — Funcionários e Permissões**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 10–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
 ## Executar localmente
 
@@ -27,7 +27,7 @@ O banco PostgreSQL embarcado (PGlite) fica em `.data/invictus`. Os registros sob
 5. Em **Inventário**, configure o estoque mínimo e registre uma contagem física. Divergências de aparelhos exigem reconciliar as unidades individualmente antes de concluir a contagem.
 6. Confira os indicadores e a auditoria. Recarregue a página para confirmar a persistência.
 
-Em **Configurações**, o proprietário pode cadastrar filiais básicas e acessos locais. Os perfis mínimos são proprietário, gerente, estoquista, consulta, operador de caixa e técnico. O operador pode vender e movimentar seu caixa, mas não pode conceder descontos ou autorizar devoluções. Técnicos acessam apenas as ordens atribuídas a eles, sem custos e margens comerciais. A gestão completa de funcionários e filiais pertence a etapas futuras.
+Em **Configurações**, o proprietário pode cadastrar filiais básicas. Em **Funcionários e permissões**, proprietário e administrador gerem a equipe. Os perfis padrão são proprietário, administrador, gerente, vendedor, operador de caixa, técnico, financeiro, estoquista e consulta. O caixa vende e movimenta seu caixa sem descontos/devoluções por padrão; técnicos trabalham em ordens atribuídas, sem custos comerciais por padrão. Exceções individuais são conferidas pelo servidor e suas dependências. A gestão completa de filiais pertence ao módulo 10.
 
 ## Demonstrar o PDV
 
@@ -138,3 +138,16 @@ Integrações de identidade, white label, assinaturas e ponto dependem da análi
 6. Exporte CSV ou abra **Imprimir**. Tabelas paginadas exportam/imprimem a página atual (até 30 registros); inadimplência acrescenta o consolidado de todas as filiais selecionadas. A visão consolidada exporta toda a série do período limitado e o comparativo.
 
 O tempo dos técnicos mede dias corridos até conclusão, incluindo espera, sem controle de horas trabalhadas. Margens dependem dos custos informados e não são apuração fiscal. Consulte [entrega do módulo 8](docs/ENTREGA-MODULO-8.md) para definições e limites.
+
+
+## Demonstrar funcionários e permissões
+
+1. Como proprietário, abra **Funcionários e permissões**. Contas anteriores já aparecem na equipe; não é preciso cadastrá-las novamente.
+2. No ambiente local, use **Novo funcionário**: nome na empresa, e-mail, senha inicial com pelo menos 12 caracteres, matrícula opcional, cargo, função, filial de trabalho e filiais autorizadas. Em produção, novas contas continuam sendo provisionadas pela central; o módulo gerencia seus vínculos existentes.
+3. Escolha o perfil e revise as exceções individuais entre padrão, permitir e bloquear. A coluna **Acesso efetivo** considera dependências: bloquear uma permissão retira também ações dependentes. Gestão de usuários, provisionamento de filiais e política de crédito são reservados ao perfil.
+4. Administradores gerem funcionários comuns somente dentro de seu acesso completo e sem conceder direitos que não possuem. Apenas o proprietário gere administradores. Não se pode retirar o próprio acesso nem rebaixar/inativar o proprietário pelo ERP.
+5. Para mudar um cadastro, informe o motivo. As sessões anteriores daquele funcionário nesta empresa são encerradas; ele precisa entrar novamente. A inativação preserva vendas, serviços e histórico. Caixas abertos e pendências atribuídas precisam ser encerrados ou reatribuídos antes da perda de acesso correspondente.
+6. Consulte **Histórico de operações**, filtre ativos/inativos e exporte o CSV da página atual (até 30 registros).
+7. Para preparar o ponto, informe o identificador externo e use **Exportar vínculo do ponto**. O JSON inclui os IDs estáveis do vínculo/usuário, empresa, filial, situação e versão. Não envia dados, não contém jornada e não sincroniza frequência. A conexão com o projeto existente será tratada no módulo 12, após disponibilização de seu repositório.
+
+Nome, cargo e função são específicos da empresa. Alterações não modificam a identidade global de uma conta compartilhada nem seus acessos em outra empresa. E-mail e senha existentes continuam sob administração da central.

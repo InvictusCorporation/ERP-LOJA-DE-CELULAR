@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 8
+# Arquitetura — módulos 1 a 9
 
 ## Componentes
 
@@ -37,7 +37,7 @@ Planos Básico/Profissional/Completo e Ponto independente permanecem planejados.
 
 ## Mapa de módulos
 
-Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, sem antecipar módulos 9 ou 10. As bases mínimas de acesso, filial e pagamentos não equivalem à implementação integral dos módulos futuros.
+Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, um módulo autorizado por vez. As bases mínimas de acesso, filial e pagamentos não equivalem à implementação integral dos módulos futuros.
 
 1. Produtos e Estoque — implementado nesta etapa.
 2. PDV — implementado: vendas, caixa, pagamentos, devoluções, comprovantes e relatórios por operador, integrado a clientes e financeiro.
@@ -46,8 +46,8 @@ Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, sem antecipar módulo
 5. Financeiro — implementado: pagar/receber, baixas e estornos, contas, centros, conciliação manual, fluxo realizado/previsto, DRE gerencial, margens e consolidação por filial.
 6. Crediário — implementado: análise manual, limite com reserva de ofertas, venda financiada no PDV, contrato, parcelas, antecipação, recebimentos, estornos, renegociação e acompanhamento de atrasos integrados ao financeiro.
 7. Compras — implementado: fornecedores compartilhados, rascunho/confirmação de pedidos, entregas parciais, conferência de unidades, estoque, contas a pagar, cancelamento de saldo e correção transacional de recebimentos.
-8. Relatórios — futuro; consolidação dos módulos operacionais.
-9. Funcionários e Permissões — futuro; apenas perfis mínimos do estoque nesta etapa.
+8. Relatórios — implementado: séries diária/mensal, margens, ticket, produtos, equipe, serviços, posição atual de estoque/crédito e comparativos por filial.
+9. Funcionários e Permissões — implementado: extensão dos vínculos existentes com cargo, função, filial, perfis, exceções individuais, histórico, inativação/reativação e contrato cadastral para o ponto.
 10. Filiais — futuro; apenas cadastro básico e saldos separados nesta etapa.
 11. Fiscal — futuro; integração homologada com provedor.
 12. Ponto — futuro; reutilização do projeto existente e contratação independente.
@@ -122,3 +122,18 @@ Financeiro e relatórios compartilham financialFactsCte e financialResult, prese
 Estoque parado e crédito representam posição atual, com data de referência separada do período. Não há reconstrução histórica desses saldos. As abas são consultas independentes; Atualizar consulta a situação mais recente. O frontend mantém filtros em edição separados dos filtros aplicados, descarta respostas de consultas substituídas e desabilita exportação/impressão durante carregamento ou erro. CSV protege células textuais contra fórmulas; a impressão é renderizada diretamente no body, com cabeçalho e critérios aplicados.
 
 A migração 202611010011_reports acrescenta somente índices de consulta. Não modifica tabelas de negócio nem migrações anteriores. Homologação de carga e planos no PostgreSQL externo ainda é necessária para produção.
+
+
+## Funcionários e permissões — módulo 9
+
+O funcionário é o vínculo existente memberships.id, que continua referenciando users.id. A migração 202611010012_employees amplia esse vínculo, preserva perfis anteriores e preenche nomes/filial de trabalho a partir dos registros existentes. Nome na empresa, cargo, função, matrícula opcional, identificação no ponto, filiais, exceções e versão pertencem ao vínculo. Não há cadastro paralelo de pessoas nem alteração de identidade global. Contas novas locais reutilizam o provisionamento administrativo; produção mantém novas contas na central.
+
+src/shared/access.ts define os perfis e o cálculo único de permissões efetivas para API, seleção de responsáveis e prévia do editor. Bloqueios prevalecem; a retirada de uma dependência remove ações dependentes. As permissões reservadas são read, users, branches e credit_settings. O proprietário mantém acesso integral. Administrador possui operação e gestão de funcionários, sem provisionamento de filiais ou política de crédito; não gere proprietários/administradores nem concede direitos que não possui. Gerente mantém seu padrão anterior; vendedor amplia o padrão de caixa com CRM; financeiro acessa financeiro/custos e crediário. Estoquista, consulta, caixa e técnico mantêm seus padrões anteriores.
+
+A identidade é lida do vínculo ativo em toda requisição. Alterações encerram as sessões do funcionário somente na empresa atual, preservando acessos em outras empresas; pedidos já em execução podem concluir. Dados pessoais do próprio proprietário podem mudar sem encerrar sua sessão, mas o próprio acesso e o acesso de proprietários são protegidos. Operações de equipe serializam gravações por empresa e revalidam o ator dentro da transação. Versão e idempotência evitam sobrescrita e duplicação, inclusive após resposta perdida.
+
+A gestão exige users e perfil proprietário/administrador. Só ficam disponíveis funcionários com todas as filiais dentro do acesso do gestor. Antes de retirar acesso/filial, verificam-se caixa aberto, ordens ainda não entregues e pendências ativas de CRM atribuídas ao funcionário. Reatribuição e fechamento usam os módulos de origem. Todos os módulos anteriores consultam a identidade efetiva; seleção de responsáveis do CRM e assistência usa a mesma regra, incluindo exceções e situação ativa.
+
+memberships mantém o SELECT global que já era usado pela autenticação antes da seleção de empresa. A nova política RLS de UPDATE limita escrita à empresa da transação; somente colunas de gestão recebem UPDATE. IDs, empresa, usuário vinculado e credenciais globais não recebem permissão de escrita pelo runtime. Filtros de empresa e filial são obrigatórios nos endpoints de funcionários. Essa exceção interna de leitura para autenticação não é uma API pública de diretório. A autorização por perfil permanece no serviço, e credenciais administrativas não podem ser usadas pela API de produção.
+
+O histórico mostra operações do ator e mudanças de seu vínculo, com motivo somente para alterações de funcionário. Detalhes arbitrários dos módulos de origem não são copiados para o painel. CSV cobre a página atual e protege textos contra fórmulas. O contrato de ponto schema_version=1 exporta employee_id (vínculo), user_id, tenant_id, identificador externo opcional, dados funcionais, filiais, situação e versão. integration_status=mapping_only e attendance=null deixam explícita a ausência de sincronização e registros de jornada. Matrícula e identificação externa são únicas por empresa quando preenchidas. A ligação real depende do projeto existente no módulo 12; buscas nos repositórios conectados não localizaram esse projeto e nenhum endereço foi fornecido nesta etapa.

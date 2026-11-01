@@ -1484,3 +1484,15 @@ nav button.active {
     font-size: 10px;
   }
 }
+
+/* Long module names keep the branch selector reachable on small screens. */
+@media (max-width: 650px) {
+  .breadcrumb {
+    min-width: 0;
+  }
+  .breadcrumb strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

@@ -1,3 +1,4 @@
+import { activeTeam } from "./access-team";
 import { randomUUID, createHash } from "node:crypto";
 import sharp from "sharp";
 import { z } from "zod";
@@ -96,7 +97,7 @@ export class RepairService {
     private inventory: InventoryService,
   ) {}
   private manages(i: Identity) {
-    return permissions(i.role).includes("service_manage");
+    return permissions(i).includes("service_manage");
   }
   private async order(
     tx: Tx,
@@ -132,10 +133,7 @@ export class RepairService {
     id: string | null,
   ) {
     if (!id) return;
-    const [m] = await tx.query(
-      `SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE u.id=$1 AND m.tenant_id=$2 AND m.active AND u.active AND m.role IN ('owner','manager','technician') AND $3::uuid=ANY(m.branch_ids)`,
-      [id, i.tenant_id, branch],
-    );
+    const [m] = await activeTeam(tx, i.tenant_id, branch, "service_work", id);
     if (!m) fail(400, "Técnico inválido ou sem acesso à filial.");
   }
   private async event(
@@ -169,10 +167,7 @@ export class RepairService {
     permit(i, "service_manage");
     branchAccess(i, branch);
     return this.db.transaction(i.tenant_id, async (tx) => ({
-      items: await tx.query(
-        "SELECT u.id,u.name,m.role FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.tenant_id=$1 AND m.active AND u.active AND m.role IN ('owner','manager','technician') AND $2::uuid=ANY(m.branch_ids) ORDER BY u.name",
-        [i.tenant_id, branch],
-      ),
+      items: await activeTeam(tx, i.tenant_id, branch, "service_work"),
     }));
   }
   async customers(i: Identity, q: string) {
@@ -335,7 +330,7 @@ export class RepairService {
               (e.kind === "issue" ? 1 : -1) * e.quantity * e.unit_cost_cents,
             0,
           );
-      if (!permissions(i.role).includes("service_cost")) {
+      if (!permissions(i).includes("service_cost")) {
         quotes.forEach((q) => delete q.labor_cost_cents);
         items.forEach((x) => delete x.unit_cost_cents);
         parts.forEach((e) => delete e.unit_cost_cents);
@@ -371,7 +366,7 @@ export class RepairService {
         totals: {
           quoted_cents: current?.total_cents || 0,
           actual_cents: total,
-          ...(permissions(i.role).includes("service_cost")
+          ...(permissions(i).includes("service_cost")
             ? { cost_cents: cost, margin_cents: total - cost }
             : {}),
         },

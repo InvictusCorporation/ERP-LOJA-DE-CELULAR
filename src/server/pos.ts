@@ -115,7 +115,7 @@ export class PosService {
     this.credit = new CreditService(db, inventory);
   }
   private canManage(i: Identity) {
-    return permissions(i.role).includes("pos_manage");
+    return permissions(i).includes("pos_manage");
   }
   private async session(tx: Tx, i: Identity, id: string, own = false) {
     const [s] = await tx.query(
