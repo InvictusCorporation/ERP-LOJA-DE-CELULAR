@@ -374,6 +374,11 @@ export class FinanceService {
       { action: "finance.title.update", id, b },
       async (tx) => {
         const t = await this.title(tx, i, id, b.version);
+        if (t.purchase_receipt_id)
+          fail(
+            409,
+            "Corrija o recebimento pelo módulo de Compras; o título preserva a origem.",
+          );
         if (t.credit_installment_id)
           fail(409, "Altere as condições da parcela pelo crediário.");
         if (t.cancelled || t.paid_cents)

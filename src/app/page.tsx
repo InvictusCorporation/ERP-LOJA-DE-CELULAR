@@ -45,6 +45,8 @@ import RepairsPanel from "./repairs-panel";
 import CrmPanel from "./crm-panel";
 import FinancePanel from "./finance-panel";
 import CreditPanel from "./credit-panel";
+import ProductBarcode, { ProductStockControl } from "./product-fields";
+import PurchasesPanel from "./purchases-panel";
 
 type Row = Record<string, any>;
 type Me = {
@@ -99,6 +101,7 @@ const nav = [
   { id: "crm", label: "CRM e clientes", icon: UsersRound },
   { id: "finance", label: "Gestão financeira", icon: ChartNoAxesCombined },
   { id: "credit", label: "Crediário próprio", icon: ShieldCheck },
+  { id: "purchases", label: "Compras e fornecedores", icon: Package },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -334,7 +337,7 @@ export default function App() {
           color: value("color"),
           capacity: value("capacity"),
           condition: value("condition"),
-          serialized: f.has("serialized"),
+          serialized: value("stock_control") === "individual",
           cost: Number(value("cost")),
           price: Number(value("price")),
           warranty_days: Number(value("warranty_days")),
@@ -702,7 +705,8 @@ export default function App() {
                 (n.id !== "repairs" || can("service_read")) &&
                 (n.id !== "crm" || can("crm_read")) &&
                 (n.id !== "finance" || can("finance_read")) &&
-                (n.id !== "credit" || can("credit_read")),
+                (n.id !== "credit" || can("credit_read")) &&
+                (n.id !== "purchases" || can("purchase_read")),
             )
             .map((n) => (
               <button
@@ -718,9 +722,9 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 a 6 ativos
+            <span className="status-dot" /> Módulos 1 a 7 ativos
             <small>
-              Estoque, PDV, Assistência, CRM, Financeiro e Crediário
+              Estoque, PDV, Assistência, CRM, Financeiro, Crediário e Compras
             </small>
           </div>
           <button
@@ -793,11 +797,14 @@ export default function App() {
                     crm: "Clientes, históricos e próximos passos do atendimento.",
                     finance:
                       "Recebimentos, pagamentos e resultados da sua operação.",
+                    purchases:
+                      "Pedidos, conferência de entregas e reposição integrados ao financeiro.",
                     credit:
                       "Ofertas, contratos, parcelas e análise manual de crédito.",
                     repairs:
                       "Do recebimento à entrega, acompanhe cada etapa do reparo.",
-                    products: "Organize seu catálogo e acompanhe cada produto.",
+                    products:
+                      "Cadastre qualquer produto e organize seu estoque.",
                     units:
                       "Identificação individual, procedência e rastreabilidade.",
                     movements:
@@ -883,6 +890,16 @@ export default function App() {
                   branch={branch}
                   branches={me.branches}
                   permissions={me.permissions}
+                  companyName={me.tenant.name}
+                  mutate={mutate}
+                  onNotice={show}
+                />
+              )}
+              {view === "purchases" && can("purchase_read") && (
+                <PurchasesPanel
+                  key={branch}
+                  branch={branch}
+                  branches={me.branches}
                   companyName={me.tenant.name}
                   mutate={mutate}
                   onNotice={show}
@@ -1264,7 +1281,7 @@ export default function App() {
                       description={
                         search
                           ? "Experimente outro nome, SKU ou código."
-                          : "Cadastre o primeiro produto e depois registre a entrada no estoque."
+                          : "Cadastre seus produtos com nome e categoria livres. Depois registre a entrada no estoque."
                       }
                       action={
                         can("catalog") && !search ? (
@@ -1493,7 +1510,7 @@ export default function App() {
                         <dt>Módulos disponíveis</dt>
                         <dd>
                           1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM / 5
-                          · Financeiro / 6 · Crediário próprio
+                          · Financeiro / 6 · Crediário próprio / 7 · Compras
                         </dd>
                       </dl>
                     </section>
@@ -1645,11 +1662,13 @@ export default function App() {
                 {modal === "product" && (
                   <>
                     <div className="form-section">INFORMAÇÕES DO PRODUTO</div>
+                    <ProductStockControl individual={!!selected?.serialized} />
                     <div className="form-grid">
                       <Field label="Nome do produto">
                         <input
                           name="name"
                           defaultValue={selected?.name}
+                          placeholder="Informe o nome do produto"
                           required
                           maxLength={180}
                           autoFocus
@@ -1663,13 +1682,7 @@ export default function App() {
                           maxLength={80}
                         />
                       </Field>
-                      <Field label="Código de barras">
-                        <input
-                          name="barcode"
-                          defaultValue={selected?.barcode}
-                          maxLength={80}
-                        />
-                      </Field>
+                      <ProductBarcode initialValue={selected?.barcode} />
                       <Field label="Condição">
                         <select
                           name="condition"
@@ -1709,33 +1722,20 @@ export default function App() {
                           maxLength={80}
                         />
                       </Field>
-                      <Field label="Capacidade">
+                      <Field label="Capacidade / especificação (opcional)">
                         <input
                           name="capacity"
                           defaultValue={selected?.capacity}
-                          placeholder="Ex.: 128 GB"
+                          placeholder="Informe a especificação, se houver"
                           maxLength={80}
                         />
                       </Field>
                     </div>
                     <p className="form-hint">
-                      Cada combinação de modelo, cor e capacidade tem seu
-                      próprio SKU e saldo. Crie marcas, modelos e categorias em
-                      Cadastros auxiliares.
+                      Cada variação tem seu próprio SKU e saldo. Crie as
+                      categorias que fizerem sentido para sua loja em Cadastros
+                      auxiliares. Marca, modelo e especificação são opcionais.
                     </p>
-                    <label className="check-box">
-                      <input
-                        type="checkbox"
-                        name="serialized"
-                        defaultChecked={selected?.serialized}
-                      />
-                      <span>
-                        <strong>Controlar cada aparelho individualmente</strong>
-                        <small>
-                          Exige IMEI ou série e procedência em cada entrada.
-                        </small>
-                      </span>
-                    </label>
                     <div className="form-section">PREÇOS E GARANTIA</div>
                     <div className="form-grid">
                       <Field label="Preço de custo (R$)">
