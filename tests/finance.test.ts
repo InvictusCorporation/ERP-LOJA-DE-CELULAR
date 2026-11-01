@@ -88,8 +88,19 @@ test("Financeiro: competência, baixas, fontes, conciliação, isolamento e inte
     return me;
   }
   const config = () => ok("/finance/config?branch_id=all");
-  const reports = (branch = "all") =>
-    ok(`/finance/reports?branch_id=${branch}&start=${start}&end=${date}`);
+  const reports = async (branch = "all") => {
+    const path = "?branch_id=" + branch + "&start=" + start + "&end=" + date;
+    const finance = await ok("/finance/reports" + path),
+      management = await ok("/reports/overview" + path);
+    for (const [key, value] of Object.entries(finance.result))
+      assert.equal(management.summary[key], value, key);
+    for (const b of finance.branches) {
+      const m = management.branches.find((x: any) => x.id === b.id);
+      for (const key of Object.keys(finance.result))
+        assert.equal(m[key], b[key], b.name + ":" + key);
+    }
+    return finance;
+  };
   const title = (id: string) => ok("/finance/titles/" + id);
   const v = async (id: string) => (await title(id)).title.version;
   const balance = async (id: string) =>

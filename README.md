@@ -1,6 +1,6 @@
 # Invictus ERP Mobile
 
-Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio** e **7 — Compras e Fornecedores**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 8–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
+Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores** e **8 — Relatórios Gerenciais**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 9–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
 ## Executar localmente
 
@@ -127,3 +127,14 @@ Os testes de API usam PostgreSQL embarcado real, role sem privilégios de propri
 - [Relatório de compras e fornecedores](docs/ENTREGA-MODULO-7.md)
 
 Integrações de identidade, white label, assinaturas e ponto dependem da análise dos projetos existentes da Invictus. Não foi criado um segundo sistema de ponto.
+
+## Demonstrar relatórios gerenciais
+
+1. Como proprietário ou gerente, entre em **Relatórios gerenciais**. Escolha as filiais autorizadas e um período de até 366 dias, terminando até hoje; clique em **Aplicar filtros**.
+2. Consulte faturamento diário/mensal, lucro bruto operacional, resultado gerencial da DRE, ticket e comparativo de filiais. Dias sem movimento aparecem zerados.
+3. Em **Produtos vendidos**, consulte quantidades, devoluções, receita, custos históricos e margem. Ordene por quantidade, receita ou lucro e pesquise nome/SKU.
+4. Veja **Vendedores**, **Técnicos** e **Serviços realizados**. Ticket considera vendas criadas no período que ainda mantêm saldo positivo, após todas as devoluções conhecidas hoje. Devoluções na receita são reconhecidas na data em que ocorreram.
+5. **Produtos parados** e **Inadimplência** são posições atuais, independentemente das datas da visão consolidada. Reposição reinicia a inatividade por produto/filial. A inadimplência usa saldo nominal vencido dos planos vigentes; não inclui encargos ainda não lançados.
+6. Exporte CSV ou abra **Imprimir**. Tabelas paginadas exportam/imprimem a página atual (até 30 registros); inadimplência acrescenta o consolidado de todas as filiais selecionadas. A visão consolidada exporta toda a série do período limitado e o comparativo.
+
+O tempo dos técnicos mede dias corridos até conclusão, incluindo espera, sem controle de horas trabalhadas. Margens dependem dos custos informados e não são apuração fiscal. Consulte [entrega do módulo 8](docs/ENTREGA-MODULO-8.md) para definições e limites.

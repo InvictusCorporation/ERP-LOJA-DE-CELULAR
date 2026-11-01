@@ -19,6 +19,7 @@ import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
 import { FinanceService } from "./finance";
 import { CreditService } from "./credit";
+import { ReportsService } from "./reports";
 import { PurchaseService } from "./purchases";
 import {
   InventoryService,
@@ -67,6 +68,7 @@ class ApiController {
     @Inject(CrmService) private crm: CrmService,
     @Inject(FinanceService) private finance: FinanceService,
     @Inject(CreditService) private credit: CreditService,
+    @Inject(ReportsService) private reports: ReportsService,
     @Inject(PurchaseService) private purchases: PurchaseService,
   ) {}
   @All("{*path}")
@@ -231,6 +233,8 @@ class ApiController {
     const purchaseBranch = String(req.query.branch_id || "");
     const purchasePage = () =>
       validate(z.coerce.number().int().min(1).max(100000), req.query.page || 1);
+    if (path.startsWith("/reports/") && method === "GET")
+      return this.reports.read(i, path.slice("/reports/".length), req.query);
     if (path === "/purchases/suppliers" && method === "GET")
       return this.purchases.suppliers(
         i,
@@ -750,6 +754,7 @@ export async function createApp(db: Database) {
   @Module({
     controllers: [ApiController],
     providers: [
+      { provide: ReportsService, useValue: new ReportsService(db) },
       {
         provide: CreditService,
         useValue: new CreditService(db, new InventoryService(db)),

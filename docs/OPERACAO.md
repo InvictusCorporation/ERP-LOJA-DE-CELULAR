@@ -70,3 +70,12 @@ Para suspeita de sessão comprometida, um administrador pode remover os registro
 ## Publicação no GitHub
 
 Repositório definido para este ERP: https://github.com/InvictusCorporation/ERP-LOJA-DE-CELULAR. A primeira publicação usa a branch `main`, preservando a branch local de trabalho `codex/produtos-estoque`. O workflow é acionado por push e pull request. Segredos ficam nas configurações do ambiente/gerenciador de segredos, nunca no repositório.
+
+
+## Atualização do módulo 8
+
+Antes dos índices da migração 202611010011_reports, a API local foi parada e preservou-se a cópia offline em backups/pre-modulo8-20261101/invictus. Ela contém dados privados e está fora do Git. Em produção, mantenha o procedimento administrativo de backup/migração: criação de índices comuns pode bloquear escritas enquanto executa, portanto programe a janela no banco exclusivo do ERP. Não altere os outros projetos ou bancos do servidor.
+
+Após atualizar, confira a mesma empresa/filial/período em Gestão financeira e Relatórios gerenciais. O resultado DRE deve coincidir. Faturamento operacional exclui receitas manuais e do crediário, que aparecem no resultado DRE. Compare uma devolução e seu custo compensatório no dia da devolução. Confira ticket com venda parcialmente e integralmente devolvida. Estoque parado e inadimplência são posições atuais, e não saldos na data final do período.
+
+Relatórios não alteram operações. Para corrigir um número, corrija sua origem pelo fluxo autorizado e atualize a consulta. Custos de catálogo não reescrevem custos históricos do PDV. Resultados CSV/impressos refletem a consulta identificada no cabeçalho; exportação paginada não equivale à base inteira. Preserve os arquivos com acesso restrito, pois incluem valores comerciais, nomes de funcionários e desempenho.
