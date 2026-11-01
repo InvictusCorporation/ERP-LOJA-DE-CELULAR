@@ -1,6 +1,6 @@
 # Invictus ERP Mobile
 
-Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores**, **8 — Relatórios Gerenciais** e **9 — Funcionários e Permissões**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 10–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
+Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores**, **8 — Relatórios Gerenciais**, **9 — Funcionários e Permissões** e **10 — Gestão de Filiais**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 11–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
 ## Executar localmente
 
@@ -27,7 +27,7 @@ O banco PostgreSQL embarcado (PGlite) fica em `.data/invictus`. Os registros sob
 5. Em **Inventário**, configure o estoque mínimo e registre uma contagem física. Divergências de aparelhos exigem reconciliar as unidades individualmente antes de concluir a contagem.
 6. Confira os indicadores e a auditoria. Recarregue a página para confirmar a persistência.
 
-Em **Configurações**, o proprietário pode cadastrar filiais básicas. Em **Funcionários e permissões**, proprietário e administrador gerem a equipe. Os perfis padrão são proprietário, administrador, gerente, vendedor, operador de caixa, técnico, financeiro, estoquista e consulta. O caixa vende e movimenta seu caixa sem descontos/devoluções por padrão; técnicos trabalham em ordens atribuídas, sem custos comerciais por padrão. Exceções individuais são conferidas pelo servidor e suas dependências. A gestão completa de filiais pertence ao módulo 10.
+Em **Gestão de filiais**, o proprietário cadastra e administra suas unidades. Em **Funcionários e permissões**, proprietário e administrador gerem a equipe. Os perfis padrão são proprietário, administrador, gerente, vendedor, operador de caixa, técnico, financeiro, estoquista e consulta. O caixa vende e movimenta seu caixa sem descontos/devoluções por padrão; técnicos trabalham em ordens atribuídas, sem custos comerciais por padrão. Exceções individuais são conferidas pelo servidor e suas dependências. Estoquistas também podem transferir mercadorias entre duas filiais autorizadas; a configuração individual pode restringir essa ação.
 
 ## Demonstrar o PDV
 
@@ -144,10 +144,23 @@ O tempo dos técnicos mede dias corridos até conclusão, incluindo espera, sem 
 
 1. Como proprietário, abra **Funcionários e permissões**. Contas anteriores já aparecem na equipe; não é preciso cadastrá-las novamente.
 2. No ambiente local, use **Novo funcionário**: nome na empresa, e-mail, senha inicial com pelo menos 12 caracteres, matrícula opcional, cargo, função, filial de trabalho e filiais autorizadas. Em produção, novas contas continuam sendo provisionadas pela central; o módulo gerencia seus vínculos existentes.
-3. Escolha o perfil e revise as exceções individuais entre padrão, permitir e bloquear. A coluna **Acesso efetivo** considera dependências: bloquear uma permissão retira também ações dependentes. Gestão de usuários, provisionamento de filiais e política de crédito são reservados ao perfil.
+3. Escolha o perfil e revise as exceções individuais entre padrão, permitir e bloquear. A coluna **Acesso efetivo** considera dependências: bloquear uma permissão retira também ações dependentes. Gestão de usuários, cadastro e situação de filiais e política de crédito são reservados ao perfil.
 4. Administradores gerem funcionários comuns somente dentro de seu acesso completo e sem conceder direitos que não possuem. Apenas o proprietário gere administradores. Não se pode retirar o próprio acesso nem rebaixar/inativar o proprietário pelo ERP.
 5. Para mudar um cadastro, informe o motivo. As sessões anteriores daquele funcionário nesta empresa são encerradas; ele precisa entrar novamente. A inativação preserva vendas, serviços e histórico. Caixas abertos e pendências atribuídas precisam ser encerrados ou reatribuídos antes da perda de acesso correspondente.
 6. Consulte **Histórico de operações**, filtre ativos/inativos e exporte o CSV da página atual (até 30 registros).
 7. Para preparar o ponto, informe o identificador externo e use **Exportar vínculo do ponto**. O JSON inclui os IDs estáveis do vínculo/usuário, empresa, filial, situação e versão. Não envia dados, não contém jornada e não sincroniza frequência. A conexão com o projeto existente será tratada no módulo 12, após disponibilização de seu repositório.
 
 Nome, cargo e função são específicos da empresa. Alterações não modificam a identidade global de uma conta compartilhada nem seus acessos em outra empresa. E-mail e senha existentes continuam sob administração da central.
+
+
+## Demonstrar gestão de filiais
+
+1. Abra **Gestão de filiais**. O proprietário cadastra/edita nome, código opcional, contato e endereço, sem duplicar unidades existentes. A criação fornece um caixa principal e concede acesso aos proprietários da empresa; acessos dos demais funcionários são definidos em Funcionários e permissões.
+2. Em **Abrir filial**, consulte estoque, unidades identificadas, caixas cadastrados/abertos e equipe com acesso. A quantidade identificada é parte do estoque total; a equipe não representa presença ou jornada.
+3. Use os atalhos de inventário, caixas/vendas e equipe. **Resultados e comparativos** reutiliza os Relatórios Gerenciais, com posição individual e consolidação das filiais autorizadas, CSV e impressão.
+4. Em **Transferências → Nova transferência**, escolha origem e destino ativos, adicione produtos por quantidade ou selecione cada série/IMEI. Até 30 produtos e 200 unidades identificadas por operação. Confira a saída e o recebimento antes de concluir: a atualização das duas filiais é atômica, sem etapa de trânsito ou confirmação parcial.
+5. Consulte o documento interno de conferência e use **Imprimir transferência**. Não há receita, despesa, pagamento ou emissão fiscal nessa operação. Identificadores e custo de aquisição das unidades são preservados.
+6. Para corrigir, confira o retorno integral e informe o motivo. O destino precisa ter todo o saldo, e unidades identificadas não podem ter alterações posteriores. O sistema preserva os registros e grava compensações; para movimentação posterior ou retorno parcial, registre uma nova transferência de retorno.
+7. Para inativar, resolva estoque, caixas, ordens, compras, CRM, ofertas vigentes, títulos, contas e movimentos financeiros sem conta. Reatribua a filial de trabalho da equipe quando necessário. Deve restar ao menos uma filial ativa. Dados anteriores ficam consultáveis; novas operações na unidade inativa são recusadas, inclusive em telas abertas anteriormente.
+
+Criar uma filial na empresa já provisionada funciona pelo proprietário também no runtime de produção, sob RLS; criar a empresa e identidades globais continua no provisionamento administrativo. Não há subdomínio, assinatura, remessa fiscal ou implantação externa automática. Veja [entrega do módulo 10](docs/ENTREGA-MODULO-10.md).

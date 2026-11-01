@@ -1,0 +1,98 @@
+.branches-panel h2 {
+  margin: 0 0 9px;
+}
+.branches-panel .employee-grid {
+  margin: 15px 0;
+}
+.branch-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.branch-metrics article {
+  border: 1px solid #dce4ed;
+  border-radius: 12px;
+  background: white;
+  padding: 20px;
+}
+.branch-metrics span {
+  display: block;
+  color: #65748a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.branch-metrics strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 27px;
+}
+.branch-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  margin: 15px 0;
+  line-height: 1.6;
+}
+.branch-confirm input {
+  width: auto;
+}
+.branch-units {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+.branch-units label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f4f7fa;
+  border-radius: 8px;
+  padding: 13px;
+  font-size: 13px;
+}
+.branch-units input {
+  width: auto;
+}
+.branch-units small {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #65748a;
+  font-size: 11px;
+}
+.branch-print .modal {
+  max-width: 1050px;
+  width: 96vw;
+}
+.branch-print .employee-table {
+  overflow: auto;
+}
+@media (max-width: 650px) {
+  .branch-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .branch-metrics article {
+    padding: 15px;
+  }
+  .branch-metrics span {
+    font-size: 12px;
+  }
+  .branch-units {
+    grid-template-columns: 1fr;
+  }
+}
+@media print {
+  .branch-print .employee-table {
+    overflow: visible;
+    border: 0;
+  }
+  .branch-print th,
+  .branch-print td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .branch-print .employee-note {
+    font-size: 10pt !important;
+  }
+}

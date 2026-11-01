@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 9
+# Arquitetura — módulos 1 a 10
 
 ## Componentes
 
@@ -48,7 +48,7 @@ Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, um módulo autorizado
 7. Compras — implementado: fornecedores compartilhados, rascunho/confirmação de pedidos, entregas parciais, conferência de unidades, estoque, contas a pagar, cancelamento de saldo e correção transacional de recebimentos.
 8. Relatórios — implementado: séries diária/mensal, margens, ticket, produtos, equipe, serviços, posição atual de estoque/crédito e comparativos por filial.
 9. Funcionários e Permissões — implementado: extensão dos vínculos existentes com cargo, função, filial, perfis, exceções individuais, histórico, inativação/reativação e contrato cadastral para o ponto.
-10. Filiais — futuro; apenas cadastro básico e saldos separados nesta etapa.
+10. Filiais — implementado: cadastro versionado, visão da unidade, transferências de mercadorias, correção bilateral, inativação controlada, resultados individuais/consolidados e atalhos para os módulos existentes.
 11. Fiscal — futuro; integração homologada com provedor.
 12. Ponto — futuro; reutilização do projeto existente e contratação independente.
 
@@ -137,3 +137,18 @@ A gestão exige users e perfil proprietário/administrador. Só ficam disponíve
 memberships mantém o SELECT global que já era usado pela autenticação antes da seleção de empresa. A nova política RLS de UPDATE limita escrita à empresa da transação; somente colunas de gestão recebem UPDATE. IDs, empresa, usuário vinculado e credenciais globais não recebem permissão de escrita pelo runtime. Filtros de empresa e filial são obrigatórios nos endpoints de funcionários. Essa exceção interna de leitura para autenticação não é uma API pública de diretório. A autorização por perfil permanece no serviço, e credenciais administrativas não podem ser usadas pela API de produção.
 
 O histórico mostra operações do ator e mudanças de seu vínculo, com motivo somente para alterações de funcionário. Detalhes arbitrários dos módulos de origem não são copiados para o painel. CSV cobre a página atual e protege textos contra fórmulas. O contrato de ponto schema_version=1 exporta employee_id (vínculo), user_id, tenant_id, identificador externo opcional, dados funcionais, filiais, situação e versão. integration_status=mapping_only e attendance=null deixam explícita a ausência de sincronização e registros de jornada. Matrícula e identificação externa são únicas por empresa quando preenchidas. A ligação real depende do projeto existente no módulo 12; buscas nos repositórios conectados não localizaram esse projeto e nenhum endereço foi fornecido nesta etapa.
+
+
+## Gestão de filiais — módulo 10
+
+branches permanece o cadastro único. A migração 202611010013_branches acrescenta contato, endereço, código opcional único por empresa, versão e atualização. Proprietário gerencia cadastro/situação por branches; branch_read consulta unidades autorizadas e branch_transfer exige branch_read e stock. Proprietário, administrador e gerente recebem leitura e transferência; financeiro recebe leitura, estoquista recebe leitura/transferência e os demais podem receber exceções não reservadas. Cada transferência exige acesso às duas unidades, não só a uma delas. A criação transacional no runtime reutiliza a criação automática de caixa e amplia os vínculos dos proprietários, sem conceder acesso automaticamente aos demais perfis.
+
+A visão da unidade reutiliza os estoques, caixas, vínculos de funcionários e o componente/API do módulo 8 para resultados. Não existe ledger financeiro paralelo nem novo diretório de pessoas. Meios de pagamento, vendas por unidade, contas e permissões continuam nos módulos anteriores. ME oferece filiais ativas para operação; os IDs de autorização são preservados para consulta histórica de unidades inativas pelo painel de filiais e relatórios.
+
+stock_transfers, stock_transfer_items e stock_transfer_reversals são imutáveis para a role runtime e protegidos por RLS por empresa e FKs compostas. Cabeçalho preserva nomes das filiais; itens preservam nome/SKU, quantidade, unidade e custo de referência. Dois stock_movements por item registram saída/entrada vinculadas, com unicidade por item/perna. A correção cria duas pernas compensatórias e registro próprio, sem apagar originais. O estorno genérico do estoque recusa pernas de transferência. Correção é integral; retorno parcial ou unidade movimentada posteriormente exige nova transferência.
+
+Transferência confirmada representa saída e recebimento já conferidos, em uma transação única, sem fase de mercadoria em trânsito. Produtos são bloqueados por ID ordenado, saldos e unidades são validados antes de lançar e a identidade física de cada unidade é preservada ao atualizar sua filial. movement_version de device_units avança em cada UPDATE; unit_revision do item registra a versão resultante da transferência. Correção exige versão, situação e localização correspondentes, sem depender da ordenação de relógio. Cabeçalhos imutáveis são serializados por trava consultiva na correção, sem lhes conceder UPDATE apenas para usar FOR UPDATE.
+
+Inativação usa trava por empresa e bloqueio da linha da filial, verifica pendências e mantém ao menos uma unidade ativa. Triggers de operação usam FOR SHARE nas filiais antiga/nova, coordenando escrita e inativação, inclusive para requisições vindas de tela antiga. Contemplam saldos/unidades/movimentos, caixas/PDV, ordens, financeiro, crediário, compras e pendências de CRM; eventos comerciais do CRM com filial também verificam filial ativa sob bloqueio compartilhado. Metadados do cadastro, consultas e logs de acesso a documentos continuam possíveis. Uma transação já iniciada que tenha obtido o bloqueio compartilhado conclui antes da decisão de inativar, cujas consultas seguintes enxergam seus dados confirmados.
+
+Antes de inativar, exige-se ausência de estoque disponível, caixas abertos, ordens ainda não entregues, compras em rascunho/confirmadas/parciais, pendências CRM, ofertas de crédito ainda vigentes, títulos abertos/a conferir, contas ativas/com saldo e movimentos financeiros sem conta. Funcionários ativos não podem manter essa filial como trabalho principal nem como único acesso ativo. Encerrar filial não altera seus documentos antigos nem apaga permissões históricas. A ligação fiscal, remessas, trânsito com recebimento parcial e customização comercial de subdomínios não são implementados nesta etapa.

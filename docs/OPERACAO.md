@@ -92,3 +92,16 @@ Mudanças de cadastro encerram sessões do funcionário nessa empresa, salvo edi
 Em produção, novas contas permanecem no provisionamento administrativo. A role runtime só ganha UPDATE nas colunas funcionais e de acesso do vínculo, sob RLS de escrita por empresa, sem INSERT de identidades ou mudança de credenciais globais. Homologue essas permissões, sessões, concorrência e recuperação no PostgreSQL externo. Não houve alteração em VPS ou em projetos externos.
 
 O vínculo exportado para ponto não estabelece conexão nem registra jornada. Valide o contrato com o projeto existente antes de implementar sincronização no módulo 12. Matrícula/ID externo não substituem validação de empresa, autorização, versão, integridade e política de sincronização do futuro adaptador. Não foram adicionadas credenciais, URLs ou regras de ponto fictícias.
+
+
+## Atualização do módulo 10
+
+Migração 202611010013_branches. Cópia offline anterior em backups/pre-modulo10-20261101/invictus, fora do Git. Cadastro e IDs anteriores são preservados. Homologue criação de filial com a role runtime, triggers e bloqueios de linha no PostgreSQL externo, além de restauração e concorrência. A migração não instala integrações fiscais, DNS ou serviços externos; não houve alteração de VPS ou outros projetos.
+
+Proprietários recebem acesso à nova filial e seu caixa principal é criado na mesma transação. Os demais funcionários precisam de atribuição explícita. O cadastro de filial dentro da empresa existente deixa de depender do modo local; empresa/contas globais novas continuam na central. Edite nome/código/contato com versão e motivo. Códigos não vazios são únicos por empresa; UF é um identificador de endereço, não validação tributária.
+
+Transferências atualizam imediatamente os dois estoques após confirmação manual de saída/recebimento. Não registre como recebida mercadoria ainda em trânsito. Confira origem, destino, quantidades e unidades. Repetir os mesmos dados após resposta perdida mantém a mesma chave no cliente; antes de alterar dados de uma operação incerta, confira o histórico. Custos de catálogo não são recalculados. Quantidade usa custo do catálogo como referência; unidades preservam seu custo de aquisição. Não há faturamento ou novo título financeiro pela transferência.
+
+Corrigir exige retorno integral, saldo do destino e versões físicas das unidades intactas. Se houve venda, saída/entrada posterior ou outra transferência de unidade identificada, registre nova transferência de retorno quando a unidade estiver disponível. Não estorne uma perna pelo estoque genérico nem edite a unidade diretamente no banco. A correção mantém cabeçalho/itens originais e referências de ambas as pernas. Compras e suas dívidas permanecem na filial de origem da compra.
+
+Para inativar, use os módulos de origem para resolver as pendências indicadas: transferir estoque, fechar caixas, entregar/encerrar ordens, receber ou cancelar saldo de pedidos, encerrar CRM/ofertas, quitar/cancelar títulos cabíveis, reconciliar movimentos sem conta, zerar/inativar contas e reatribuir a filial principal da equipe. Não mova saldos ou dívidas diretamente no banco. A reativação permite novas operações com os mesmos IDs e histórico. Não exclua filiais. Novos lançamentos em filial inativa recebem conflito, e a tela pode precisar ser atualizada.

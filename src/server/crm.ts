@@ -93,6 +93,14 @@ export class CrmService {
     details: unknown = {},
     branch: string | null = null,
   ) {
+    if (branch) {
+      const [unit] = await tx.query(
+        "SELECT id FROM branches WHERE id=$1 AND active FOR SHARE",
+        [branch],
+      );
+      if (!unit)
+        fail(409, "Filial inativa ou indisponível para registrar atendimento.");
+    }
     await tx.query(
       "INSERT INTO crm_events(id,tenant_id,customer_id,branch_id,entity_id,action,details,actor_id) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8) RETURNING id",
       [

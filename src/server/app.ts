@@ -19,6 +19,7 @@ import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
 import { FinanceService } from "./finance";
 import { CreditService } from "./credit";
+import { BranchesService } from "./branches";
 import { EmployeesService } from "./employees";
 import { ReportsService } from "./reports";
 import { PurchaseService } from "./purchases";
@@ -68,6 +69,7 @@ class ApiController {
     @Inject(CrmService) private crm: CrmService,
     @Inject(FinanceService) private finance: FinanceService,
     @Inject(CreditService) private credit: CreditService,
+    @Inject(BranchesService) private branches: BranchesService,
     @Inject(EmployeesService) private employees: EmployeesService,
     @Inject(ReportsService) private reports: ReportsService,
     @Inject(PurchaseService) private purchases: PurchaseService,
@@ -89,6 +91,12 @@ class ApiController {
             ? "Caixa, sessão ou operação já registrada. Atualize os dados e confira o histórico."
             : "Já existe um cadastro com este SKU, código de barras, IMEI, série, nome ou e-mail.",
         });
+      else if (code === "55000")
+        res
+          .status(409)
+          .json({
+            error: "Filial inativa ou indisponível. Reative-a antes de operar.",
+          });
       else if (code === "23503")
         res
           .status(400)
@@ -676,28 +684,41 @@ class ApiController {
         ),
       }));
     }
-    if (path === "/branches" && method === "POST") {
-      permit(i, "branches");
-      const b = validate(
-        z.object({ name: z.string().trim().min(1).max(180) }).strict(),
-        body,
-      );
-      // Local foundation only; commercial branch administration is a later module.
-      if (!this.db.embedded)
-        fail(403, "Cadastro de filial deve ser provisionado pela central.");
-      const id = randomUUID();
-      await this.db.provision(async (tx) => {
-        await tx.query(
-          "INSERT INTO branches(id,tenant_id,name) VALUES($1,$2,$3) RETURNING id",
-          [id, i.tenant_id, b.name],
-        );
-        await tx.query(
-          "UPDATE memberships SET branch_ids=array_append(branch_ids,$1::uuid) WHERE tenant_id=$2 AND role='owner' RETURNING id",
-          [id, i.tenant_id],
-        );
-        await audit(tx, i, "branch.created", id, { name: b.name });
-      });
-      return { id };
+    if (path === "/branches" && method === "GET")
+      return this.branches.list(i, req.query);
+    if (path === "/branches" && method === "POST")
+      return this.branches.save(i, null, body, key);
+    const branchRoute = path.match(
+      /^\/branches\/([\w-]+)(?:\/(state|stock))?$/,
+    );
+    if (branchRoute) {
+      const [, id, action] = branchRoute;
+      if (method === "GET")
+        return action === "stock"
+          ? this.branches.stock(i, id, req.query)
+          : !action
+            ? this.branches.detail(i, id)
+            : fail(404, "Operação não encontrada.");
+      if (method === "PUT" && !action)
+        return this.branches.save(i, id, body, key);
+      if (method === "POST" && action === "state")
+        return this.branches.state(i, id, body, key);
+    }
+    if (path === "/branch-transfers/units" && method === "GET")
+      return this.branches.units(i, req.query);
+    if (path === "/branch-transfers" && method === "GET")
+      return this.branches.transfers(i, req.query);
+    if (path === "/branch-transfers" && method === "POST")
+      return this.branches.transfer(i, body, key);
+    const transferRoute = path.match(
+      /^\/branch-transfers\/([\w-]+)(?:\/(reverse))?$/,
+    );
+    if (transferRoute) {
+      const [, id, action] = transferRoute;
+      if (method === "GET" && !action)
+        return this.branches.transferDetail(i, id);
+      if (method === "POST" && action === "reverse")
+        return this.branches.reverse(i, id, body, key);
     }
     if (path === "/employees/config" && method === "GET")
       return this.employees.config(i);
@@ -739,6 +760,10 @@ export async function createApp(db: Database) {
   @Module({
     controllers: [ApiController],
     providers: [
+      {
+        provide: BranchesService,
+        useValue: new BranchesService(db, new InventoryService(db)),
+      },
       { provide: EmployeesService, useValue: new EmployeesService(db) },
       { provide: ReportsService, useValue: new ReportsService(db) },
       {
