@@ -19,6 +19,7 @@ import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
 import { FinanceService } from "./finance";
 import { CreditService } from "./credit";
+import { EmployeesService } from "./employees";
 import { ReportsService } from "./reports";
 import { PurchaseService } from "./purchases";
 import {
@@ -34,7 +35,6 @@ import {
   hashToken,
   token,
   passwordMatches,
-  passwordHash,
   Identity,
   permissions,
 } from "./security";
@@ -68,6 +68,7 @@ class ApiController {
     @Inject(CrmService) private crm: CrmService,
     @Inject(FinanceService) private finance: FinanceService,
     @Inject(CreditService) private credit: CreditService,
+    @Inject(EmployeesService) private employees: EmployeesService,
     @Inject(ReportsService) private reports: ReportsService,
     @Inject(PurchaseService) private purchases: PurchaseService,
   ) {}
@@ -117,7 +118,7 @@ class ApiController {
     if (typeof session !== "string" || session.length !== 64)
       fail(401, "Entre na sua conta.");
     const [i] = await this.db.system<Identity>(
-      `SELECT s.user_id,s.tenant_id,s.csrf,u.name,u.email,m.role,m.branch_ids FROM sessions s
+      `SELECT s.user_id,s.tenant_id,s.csrf,coalesce(nullif(m.employee_name,''),u.name) AS name,u.email,m.role,m.branch_ids,m.permission_grants,m.permission_denials FROM sessions s
    JOIN users u ON u.id=s.user_id JOIN memberships m ON m.user_id=s.user_id AND m.tenant_id=s.tenant_id
    WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active AND m.active`,
       [hashToken(session)],
@@ -217,7 +218,7 @@ class ApiController {
           user: { id: i.user_id, name: i.name, email: i.email, role: i.role },
           tenant,
           branches,
-          permissions: permissions(i.role),
+          permissions: permissions(i),
           csrf: i.csrf,
           mode: this.db.embedded ? "local" : "production",
         };
@@ -661,7 +662,7 @@ class ApiController {
           `SELECT d.*,p.name AS product_name,coalesce(array_agg(di.imei) FILTER(WHERE di.imei IS NOT NULL),'{}') AS imeis FROM device_units d JOIN products p ON p.id=d.product_id LEFT JOIN device_identifiers di ON di.unit_id=d.id WHERE d.branch_id=$1 AND ($2::uuid IS NULL OR d.product_id=$2) GROUP BY d.id,p.name ORDER BY d.created_at DESC LIMIT 500`,
           [branch, productId],
         );
-        if (!permissions(i.role).includes("cost"))
+        if (!permissions(i).includes("cost"))
           units.forEach((u) => delete u.acquisition_cost);
         return { items: units };
       });
@@ -698,55 +699,39 @@ class ApiController {
       });
       return { id };
     }
+    if (path === "/employees/config" && method === "GET")
+      return this.employees.config(i);
+    if (path === "/employees" && method === "GET")
+      return this.employees.list(i, req.query);
+    if (path === "/employees" && method === "POST")
+      return this.employees.save(i, null, body, key);
+    const employee = path.match(
+      /^\/employees\/([\w-]+)(?:\/(history|point))?$/,
+    );
+    if (employee) {
+      const [, id, action] = employee;
+      if (method === "GET")
+        return action === "history"
+          ? this.employees.history(i, id, req.query.page)
+          : action === "point"
+            ? this.employees.point(i, id)
+            : this.employees.detail(i, id);
+      if (method === "PUT" && !action)
+        return this.employees.save(i, id, body, key);
+    }
     if (path === "/users" && method === "GET") {
-      permit(i, "users");
+      const result = await this.employees.list(i, {});
       return {
-        items: await this.db.system(
-          "SELECT u.id,u.name,u.email,m.role,m.branch_ids,m.active FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.tenant_id=$1 ORDER BY u.name",
-          [i.tenant_id],
-        ),
+        ...result,
+        items: result.items.map((e: any) => ({
+          ...e,
+          id: e.user_id,
+          employee_id: e.id,
+        })),
       };
     }
-    if (path === "/users" && method === "POST") {
-      permit(i, "users");
-      if (!this.db.embedded)
-        fail(403, "Usuários devem ser provisionados pela central.");
-      const b = validate(
-        z
-          .object({
-            name: z.string().trim().min(1).max(180),
-            email: z
-              .email()
-              .max(254)
-              .transform((v) => v.toLowerCase()),
-            password: z.string().min(12).max(128),
-            role: z.enum([
-              "manager",
-              "stock",
-              "viewer",
-              "cashier",
-              "technician",
-            ]),
-            branch_ids: z.array(uuid).min(1).max(100),
-          })
-          .strict(),
-        body,
-      );
-      b.branch_ids.forEach((branch) => branchAccess(i, branch));
-      const id = randomUUID();
-      await this.db.provision(async (tx) => {
-        await tx.query(
-          "INSERT INTO users(id,name,email,password_hash) VALUES($1,$2,$3,$4) RETURNING id",
-          [id, b.name, b.email, passwordHash(b.password)],
-        );
-        await tx.query(
-          "INSERT INTO memberships(id,tenant_id,user_id,role,branch_ids) VALUES($1,$2,$3,$4,$5::uuid[]) RETURNING id",
-          [randomUUID(), i.tenant_id, id, b.role, b.branch_ids],
-        );
-        await audit(tx, i, "user.created", id, { role: b.role });
-      });
-      return { id };
-    }
+    if (path === "/users" && method === "POST")
+      return this.employees.save(i, null, body, key);
     fail(404, "Operação não encontrada.");
   }
 }
@@ -754,6 +739,7 @@ export async function createApp(db: Database) {
   @Module({
     controllers: [ApiController],
     providers: [
+      { provide: EmployeesService, useValue: new EmployeesService(db) },
       { provide: ReportsService, useValue: new ReportsService(db) },
       {
         provide: CreditService,

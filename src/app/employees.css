@@ -1,0 +1,237 @@
+.employees-panel {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.employee-heading,
+.employee-actions,
+.employee-pagination {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.employee-heading {
+  justify-content: space-between;
+}
+.employee-heading h2 {
+  margin: 0 0 7px;
+}
+.employee-heading p {
+  color: #65748a;
+  font-size: 13px;
+  margin: 0;
+}
+.employees-panel button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.employees-panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.employee-filters {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  background: white;
+  padding: 18px;
+  border: 1px solid #e1e6ed;
+  border-radius: 12px;
+}
+.employee-filters .field {
+  flex: 1;
+  min-width: 150px;
+  margin: 0;
+}
+.employee-table {
+  overflow: auto;
+  min-width: 0;
+  border: 1px solid #e1e6ed;
+  border-radius: 10px;
+  background: white;
+}
+.employee-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.employee-table th,
+.employee-table td {
+  padding: 13px;
+  white-space: nowrap;
+  text-align: left;
+  border-bottom: 1px solid #edf1f5;
+}
+.employee-table th {
+  background: #eff3f7;
+}
+.employee-table td small {
+  display: block;
+  color: #65748a;
+  font-size: 11px;
+  margin-top: 5px;
+  max-width: 280px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.employee-table select {
+  min-width: 200px;
+}
+.employee-active,
+.employee-inactive {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+.employee-active {
+  background: #e6f5eb;
+  color: #196239;
+}
+.employee-inactive {
+  background: #f4eded;
+  color: #864138;
+}
+.employee-note {
+  color: #65748a;
+  line-height: 1.7;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.employee-empty {
+  padding: 25px;
+  color: #65748a;
+}
+.employee-pagination {
+  justify-content: end;
+  font-size: 12px;
+  color: #65748a;
+}
+.employee-editor {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.employee-editor fieldset {
+  min-width: 0;
+  border: 1px solid #e1e6ed;
+  border-radius: 12px;
+  padding: 22px;
+  background: white;
+}
+.employee-editor legend {
+  padding: 0 8px;
+  font-weight: 650;
+  font-size: 15px;
+}
+.employee-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+}
+.employee-grid .field {
+  min-width: 0;
+}
+.employee-editor fieldset:disabled {
+  opacity: 0.7;
+}
+.employee-branches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 15px 0;
+}
+.employee-branches label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.employee-branches input {
+  width: auto;
+}
+.employee-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.employee-tabs button {
+  background: white;
+  border: 1px solid #dce4ed;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.employee-tabs button[aria-selected="true"] {
+  background: #fff9c8;
+  border-color: #e7cf00;
+  font-weight: 650;
+}
+@media (max-width: 650px) {
+  .employee-grid {
+    grid-template-columns: 1fr;
+  }
+  .employee-filters .field {
+    min-width: 130px;
+  }
+  .employee-editor fieldset {
+    padding: 15px;
+  }
+  .employee-table th,
+  .employee-table td {
+    padding: 10px;
+  }
+  .employee-actions {
+    width: 100%;
+  }
+  .employee-actions button {
+    flex: 1;
+  }
+  .employee-pagination {
+    justify-content: start;
+  }
+}
+
+.employees-panel h2 {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 650px) {
+  .employee-permissions .employee-table table,
+  .employee-permissions .employee-table tbody,
+  .employee-permissions .employee-table tr,
+  .employee-permissions .employee-table td {
+    display: block;
+    width: 100%;
+  }
+  .employee-permissions .employee-table thead {
+    display: none;
+  }
+  .employee-permissions .employee-table tr {
+    padding: 12px;
+    border-bottom: 1px solid #e1e6ed;
+  }
+  .employee-permissions .employee-table td {
+    padding: 6px 0;
+    white-space: normal;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .employee-permissions .employee-table td:first-child {
+    font-weight: 600;
+  }
+  .employee-permissions .employee-table select {
+    min-width: 0;
+    width: 100%;
+  }
+  .employee-permissions .employee-table td:nth-child(3)::before {
+    content: "Acesso efetivo: ";
+    color: #65748a;
+  }
+}

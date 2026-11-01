@@ -1,3 +1,4 @@
+import { activeTeam } from "./access-team";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { Database, Tx } from "./db";
@@ -80,10 +81,7 @@ export class CrmService {
     return c;
   }
   private async owner(tx: Tx, i: Identity, branch: string, id: string) {
-    const [u] = await tx.query(
-      "SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE u.id=$1 AND m.tenant_id=$2 AND m.active AND u.active AND m.role IN ('owner','manager') AND $3::uuid=ANY(m.branch_ids)",
-      [id, i.tenant_id, branch],
-    );
+    const [u] = await activeTeam(tx, i.tenant_id, branch, "crm_manage", id);
     if (!u) fail(400, "Responsável inválido ou sem acesso comercial à filial.");
   }
   private async event(
@@ -114,10 +112,7 @@ export class CrmService {
     permit(i, "crm_manage");
     branchAccess(i, branch);
     return this.db.transaction(i.tenant_id, async (tx) => ({
-      items: await tx.query(
-        "SELECT u.id,u.name FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.tenant_id=$1 AND m.active AND u.active AND m.role IN ('owner','manager') AND $2::uuid=ANY(m.branch_ids) ORDER BY u.name",
-        [i.tenant_id, branch],
-      ),
+      items: await activeTeam(tx, i.tenant_id, branch, "crm_manage"),
     }));
   }
   async lookup(i: Identity, q: string) {

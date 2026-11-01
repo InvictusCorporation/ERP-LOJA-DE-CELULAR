@@ -46,12 +46,13 @@ import CrmPanel from "./crm-panel";
 import FinancePanel from "./finance-panel";
 import CreditPanel from "./credit-panel";
 import ProductBarcode, { ProductStockControl } from "./product-fields";
+import EmployeesPanel from "./employees-panel";
 import ReportsPanel from "./reports-panel";
 import PurchasesPanel from "./purchases-panel";
 
 type Row = Record<string, any>;
 type Me = {
-  user: { name: string; email: string; role: string };
+  user: { id: string; name: string; email: string; role: string };
   tenant: { id: string; name: string };
   branches: Row[];
   permissions: string[];
@@ -65,7 +66,6 @@ type Modal =
   | "minimum"
   | "catalog"
   | "branch"
-  | "user"
   | "reverse"
   | null;
 const brl = (n: any) =>
@@ -86,6 +86,9 @@ const labels: Row = {
   brand: "Marca",
   model: "Modelo",
   supplier: "Fornecedor",
+  administrator: "Administrador",
+  seller: "Vendedor",
+  financial: "Financeiro",
   owner: "Proprietário",
   manager: "Gerente",
   stock: "Estoquista",
@@ -104,6 +107,7 @@ const nav = [
   { id: "credit", label: "Crediário próprio", icon: ShieldCheck },
   { id: "purchases", label: "Compras e fornecedores", icon: Package },
   { id: "reports", label: "Relatórios gerenciais", icon: ChartNoAxesCombined },
+  { id: "employees", label: "Funcionários e permissões", icon: UsersRound },
   { id: "products", label: "Produtos", icon: Package },
   { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
@@ -244,8 +248,6 @@ export default function App() {
       } else if (view === "units" || view === "movements")
         result = await request(`/${view}?${suffix}&page=${page}`);
       else if (view === "audit") result = await request("/audit");
-      else if (view === "settings" && me.permissions.includes("users"))
-        result = await request("/users");
       if (loadSequence.current !== sequence) return;
       setCatalog(cat.items);
       setData(result);
@@ -360,15 +362,7 @@ export default function App() {
       else if (modal === "branch") {
         await mutate("/branches", { name: value("name") });
         await refreshMe();
-      } else if (modal === "user")
-        await mutate("/users", {
-          name: value("name"),
-          email: value("email"),
-          password: value("password"),
-          role: value("role"),
-          branch_ids: f.getAll("branch_ids"),
-        });
-      else if (modal === "minimum")
+      } else if (modal === "minimum")
         await mutate(
           "/minimum",
           {
@@ -709,7 +703,8 @@ export default function App() {
                 (n.id !== "finance" || can("finance_read")) &&
                 (n.id !== "credit" || can("credit_read")) &&
                 (n.id !== "purchases" || can("purchase_read")) &&
-                (n.id !== "reports" || can("reports_read")),
+                (n.id !== "reports" || can("reports_read")) &&
+                (n.id !== "employees" || can("users")),
             )
             .map((n) => (
               <button
@@ -725,9 +720,10 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="module-status">
-            <span className="status-dot" /> Módulos 1 a 8 ativos
+            <span className="status-dot" /> Módulos 1 a 9 ativos
             <small>
-              Estoque, PDV, Assistência, CRM, Financeiro, Crediário, Compras e Relatórios
+              Estoque, PDV, Assistência, CRM, Financeiro, Crediário, Compras,
+              Relatórios e Funcionários
             </small>
           </div>
           <button
@@ -800,6 +796,7 @@ export default function App() {
                     crm: "Clientes, históricos e próximos passos do atendimento.",
                     finance:
                       "Recebimentos, pagamentos e resultados da sua operação.",
+                    employees: "Equipe, funções e acesso por filial.",
                     reports:
                       "Indicadores e comparativos para acompanhar sua loja.",
                     purchases:
@@ -908,6 +905,17 @@ export default function App() {
                   companyName={me.tenant.name}
                   mutate={mutate}
                   onNotice={show}
+                />
+              )}
+              {view === "employees" && can("users") && (
+                <EmployeesPanel
+                  key={branch}
+                  branch={branch}
+                  branches={me.branches}
+                  userId={me.user.id}
+                  mutate={mutate}
+                  onNotice={show}
+                  onRefreshIdentity={refreshMe}
                 />
               )}
               {view === "reports" && can("reports_read") && (
@@ -1524,7 +1532,7 @@ export default function App() {
                         <dd>
                           1 · Estoque / 2 · PDV / 3 · Assistência / 4 · CRM / 5
                           · Financeiro / 6 · Crediário próprio / 7 · Compras / 8
-                          · Relatórios
+                          · Relatórios / 9 · Funcionários
                         </dd>
                       </dl>
                     </section>
@@ -1555,55 +1563,18 @@ export default function App() {
                     </section>
                   </div>
                   {can("users") && (
-                    <section className="panel team-panel">
+                    <section className="panel">
                       <div className="panel-heading">
                         <div>
-                          <h2>Acesso ao estoque</h2>
-                          <p>Perfis mínimos desta etapa</p>
+                          <h2>Equipe e acessos</h2>
+                          <p>Cadastros, cargos e permissões individuais.</p>
                         </div>
-                        {local && (
-                          <button
-                            className="primary small"
-                            onClick={() => open("user")}
-                          >
-                            <Plus size={16} />
-                            Novo acesso
-                          </button>
-                        )}
-                      </div>
-                      <div className="table-wrap">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Nome</th>
-                              <th>E-mail</th>
-                              <th>Perfil</th>
-                              <th>Filiais</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {data.items?.map((u: Row) => (
-                              <tr key={u.id}>
-                                <td>
-                                  <strong>{u.name}</strong>
-                                </td>
-                                <td>{u.email}</td>
-                                <td>
-                                  <Badge>{labels[u.role]}</Badge>
-                                </td>
-                                <td>
-                                  {u.branch_ids
-                                    .map(
-                                      (id: string) =>
-                                        me.branches.find((b) => b.id === id)
-                                          ?.name || "Filial",
-                                    )
-                                    .join(", ")}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        <button
+                          className="primary small"
+                          onClick={() => navigate("employees")}
+                        >
+                          Gerir funcionários
+                        </button>
                       </div>
                     </section>
                   )}
@@ -1656,7 +1627,6 @@ export default function App() {
                       minimum: "Estoque mínimo",
                       catalog: "Novo cadastro auxiliar",
                       branch: "Adicionar filial",
-                      user: "Novo acesso",
                       reverse: "Estornar movimentação",
                     }[modal]
                   }
@@ -1824,63 +1794,6 @@ export default function App() {
                     <Field label="Nome da filial">
                       <input name="name" required maxLength={180} autoFocus />
                     </Field>
-                  </>
-                )}
-                {modal === "user" && (
-                  <>
-                    <Field label="Nome">
-                      <input name="name" required maxLength={180} autoFocus />
-                    </Field>
-                    <Field label="E-mail">
-                      <input name="email" type="email" required />
-                    </Field>
-                    <Field
-                      label="Senha inicial"
-                      hint="Pelo menos 12 caracteres. Compartilhe por um canal seguro."
-                    >
-                      <input
-                        name="password"
-                        type="password"
-                        minLength={12}
-                        maxLength={128}
-                        required
-                        autoComplete="new-password"
-                      />
-                    </Field>
-                    <Field label="Perfil">
-                      <select name="role">
-                        <option value="viewer">
-                          Consulta · leitura, sem custos
-                        </option>
-                        <option value="stock">
-                          Estoquista · leitura e movimentações, sem custos
-                        </option>
-                        <option value="cashier">
-                          Operador de caixa · vendas e caixa, sem descontos
-                        </option>
-                        <option value="technician">
-                          Técnico · ordens atribuídas e peças, sem aprovação
-                          comercial
-                        </option>
-                        <option value="manager">
-                          Gerente · catálogo, custos, inventário e auditoria
-                        </option>
-                      </select>
-                    </Field>
-                    <fieldset className="branch-checks">
-                      <legend>Filiais autorizadas</legend>
-                      {me.branches.map((b) => (
-                        <label key={b.id} className="check-label">
-                          <input
-                            name="branch_ids"
-                            value={b.id}
-                            type="checkbox"
-                            defaultChecked={b.id === branch}
-                          />
-                          {b.name}
-                        </label>
-                      ))}
-                    </fieldset>
                   </>
                 )}
                 {modal === "minimum" && (

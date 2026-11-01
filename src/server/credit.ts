@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { Database, Tx } from "./db";
-import { Identity } from "./security";
+import { Identity, permissions } from "./security";
 import {
   InventoryService,
   uuid,
@@ -1149,7 +1149,7 @@ export class CreditService {
       );
       if (!c) fail(404, "Contrato não encontrado.");
       branchAccess(i, c.branch_id);
-      if (!["owner", "manager"].includes(i.role)) {
+      if (!permissions(i).includes("credit_read")) {
         permit(i, "credit_sell");
         if (c.operator_id !== i.user_id)
           fail(403, "Documento restrito ao operador responsável pela venda.");
