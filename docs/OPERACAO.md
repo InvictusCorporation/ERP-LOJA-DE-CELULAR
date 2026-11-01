@@ -39,6 +39,10 @@ Os testes locais não comprovam o comportamento da conexão Prisma contra o Post
 
 ## Recuperação e incidentes
 
+O módulo 7 adiciona `202611010010_purchases`. A cópia offline anterior foi preservada em `backups/pre-modulo7-20261101/invictus`. Após restaurar, confira fornecedores compartilhados, pedidos por filial, quantidades confirmadas/recebidas, referências de entregas, unidades, movimentos de estoque, títulos a pagar e estornos. Não edite migrações aplicadas. Rascunhos e confirmações não movimentam saldos: somente recebimentos efetivos criam estoque e débito, atomicamente.
+
+Referências de recebimento não podem se repetir para o mesmo fornecedor. Se um documento cobre entregas em partes, identifique cada conferência com referência própria vinculada ao documento. Para corrigir recebimento, estorne primeiro pagamentos no financeiro (desfazendo conciliação quando necessária) e use a correção em Compras. Saldo insuficiente ou unidades com movimentação posterior impedem a operação. Cancelar saldo de pedido não cancela recebimentos nem dívidas existentes. Revise manualmente o custo de catálogo após correção, se ele foi atualizado; custos históricos de vendas não são reescritos.
+
 O módulo 6 adiciona `202610290009_store_credit`. A cópia offline anterior foi preservada em `backups/pre-modulo6-20261029`. Após restaurar, confira perfis/CPF, limites, ofertas ainda reservadas, contratos e revisões, parcelas, recibos, contas, descontos e eventos da DRE. A cópia contém dados privados e não acompanha o Git.
 
 O crediário inicia desabilitado. O proprietário deve registrar a revisão real dos termos, taxas e método antes de habilitar ofertas; aprovações de comprador e consultas externas são manuais. Revise acessos a documentos e proteja contratos exportados com dados pessoais. Não há mensagens automáticas, conexão com bureaus, assinatura eletrônica ou cobrança bancária. A primeira implantação de produção exige homologação das migrações e do ledger no PostgreSQL escolhido, além da validação dos documentos comerciais.

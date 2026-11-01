@@ -19,6 +19,7 @@ import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
 import { FinanceService } from "./finance";
 import { CreditService } from "./credit";
+import { PurchaseService } from "./purchases";
 import {
   InventoryService,
   validate,
@@ -66,6 +67,7 @@ class ApiController {
     @Inject(CrmService) private crm: CrmService,
     @Inject(FinanceService) private finance: FinanceService,
     @Inject(CreditService) private credit: CreditService,
+    @Inject(PurchaseService) private purchases: PurchaseService,
   ) {}
   @All("{*path}")
   async handle(@Req() req: Request, @Res() res: Response) {
@@ -225,6 +227,61 @@ class ApiController {
       );
       res.clearCookie("invictus_session", cookieOptions());
       return { ok: true };
+    }
+    const purchaseBranch = String(req.query.branch_id || "");
+    const purchasePage = () =>
+      validate(z.coerce.number().int().min(1).max(100000), req.query.page || 1);
+    if (path === "/purchases/suppliers" && method === "GET")
+      return this.purchases.suppliers(
+        i,
+        String(req.query.q || ""),
+        purchasePage(),
+      );
+    if (path === "/purchases/suppliers" && method === "POST")
+      return this.purchases.saveSupplier(i, null, body, key);
+    if (path === "/purchases/orders" && method === "GET")
+      return this.purchases.list(
+        i,
+        purchaseBranch,
+        String(req.query.q || ""),
+        String(req.query.status || "all"),
+        purchasePage(),
+      );
+    if (path === "/purchases/orders" && method === "POST")
+      return this.purchases.saveOrder(i, null, body, key);
+    const purchaseRoute = path.match(
+      /^\/purchases\/(suppliers|orders)\/([\w-]+)(?:\/(issue|receive|cancel|receipts\/([\w-]+)\/reverse))?$/,
+    );
+    const purchaseReceipt = path.match(
+      /^\/purchases\/orders\/([\w-]+)\/receipts\/([\w-]+)$/,
+    );
+    if (purchaseReceipt && method === "GET")
+      return this.purchases.receiptDetail(
+        i,
+        purchaseReceipt[1],
+        purchaseReceipt[2],
+      );
+    if (purchaseRoute) {
+      const [, type, id, action, receiptId] = purchaseRoute;
+      if (type === "suppliers" && !action) {
+        if (method === "GET")
+          return this.purchases.supplierDetail(i, id, purchaseBranch);
+        if (method === "POST")
+          return this.purchases.saveSupplier(i, id, body, key);
+      }
+      if (type === "orders") {
+        if (method === "GET" && !action) return this.purchases.detail(i, id);
+        if (method === "POST") {
+          if (!action) return this.purchases.saveOrder(i, id, body, key);
+          if (action === "issue") return this.purchases.issue(i, id, body, key);
+          if (action === "receive")
+            return this.purchases.receive(i, id, body, key);
+          if (action === "cancel")
+            return this.purchases.cancel(i, id, body, key);
+          if (receiptId)
+            return this.purchases.reverseReceipt(i, id, receiptId, body, key);
+        }
+      }
     }
     const creditBranch = String(req.query.branch_id || "");
     const creditPage = () =>
@@ -696,6 +753,10 @@ export async function createApp(db: Database) {
       {
         provide: CreditService,
         useValue: new CreditService(db, new InventoryService(db)),
+      },
+      {
+        provide: PurchaseService,
+        useValue: new PurchaseService(db, new InventoryService(db)),
       },
       {
         provide: FinanceService,

@@ -28,6 +28,8 @@ export type Identity = {
 };
 const rights: Record<string, string[]> = {
   owner: [
+    "purchase_read",
+    "purchase_manage",
     "credit_read",
     "credit_manage",
     "credit_settings",
@@ -60,6 +62,8 @@ const rights: Record<string, string[]> = {
     "service_deliver",
   ],
   manager: [
+    "purchase_read",
+    "purchase_manage",
     "credit_read",
     "credit_manage",
     "credit_sell",

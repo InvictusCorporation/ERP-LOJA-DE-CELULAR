@@ -1,6 +1,6 @@
 {
   "name": "invictus-erp-mobile",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "scripts": {
     "dev": "tsc -p tsconfig.server.json && node dist/scripts/dev.js",
@@ -9,7 +9,7 @@
     "build": "prisma generate && next build && tsc -p tsconfig.server.json",
     "start": "node dist/scripts/start.js",
     "test": "tsc -p tsconfig.server.json && node --test --test-concurrency=1 dist/tests/*.test.js",
-    "test:e2e": "playwright test stock.spec.ts pos.spec.ts repairs.spec.ts crm.spec.ts finance.spec.ts && playwright test credit.spec.ts",
+    "test:e2e": "playwright test stock.spec.ts pos.spec.ts repairs.spec.ts crm.spec.ts finance.spec.ts && playwright test credit.spec.ts catalog-scan.spec.ts purchases.spec.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "db:migrate": "prisma migrate deploy",
     "db:backup": "tsc -p tsconfig.server.json && node dist/scripts/backup.js",
@@ -21,6 +21,7 @@
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
     "@prisma/client": "6.19.0",
+    "@zxing/browser": "^0.2.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",

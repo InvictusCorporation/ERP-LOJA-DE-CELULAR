@@ -68,6 +68,8 @@ const eventNames: Row = {
   opening_reviewed: "Saldo anterior conferido",
   settled: "Baixa registrada",
   settlement_reversed: "Baixa estornada",
+  purchase_received: "Recebimento de compra vinculado",
+  purchase_reversed: "Recebimento de compra estornado",
   reconciled: "Conciliado",
   reconciliation_undone: "Conciliação desfeita",
   adjusted: "Saldo ajustado",
@@ -914,7 +916,14 @@ export default function FinancePanel({
                       <strong>{t.description}</strong>
                       <small>
                         {t.counterparty} ·{" "}
-                        {t.source_kind === "repair" ? "Assistência" : "Manual"}
+                        {(
+                          {
+                            repair: "Assistência",
+                            purchase: "Compras",
+                            credit: "Crediário",
+                            manual: "Manual",
+                          } as Row
+                        )[t.source_kind] || t.source_kind}
                       </small>
                     </td>
                     <td>
@@ -1324,7 +1333,7 @@ export default function FinancePanel({
                         Registrar baixa
                       </button>
                     )}
-                  {detail.title.source_kind !== "credit" &&
+                  {!["credit", "purchase"].includes(detail.title.source_kind) &&
                     !detail.title.cancelled &&
                     !detail.title.paid_cents && (
                       <>
@@ -1353,6 +1362,13 @@ export default function FinancePanel({
                   </p>
                 )}
                 <h3>Baixas e estornos</h3>
+                {detail.title.source_kind === "purchase" && (
+                  <p className="form-hint">
+                    Recebimento de compra: valor e origem são preservados em
+                    Compras. Registre o pagamento e eventuais estornos aqui no
+                    financeiro.
+                  </p>
+                )}
                 {detail.settlements.length ? (
                   <div className="table-scroll">
                     <table>

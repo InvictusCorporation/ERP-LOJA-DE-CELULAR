@@ -1,4 +1,4 @@
-# Arquitetura — módulos 1 a 6
+# Arquitetura — módulos 1 a 7
 
 ## Componentes
 
@@ -45,12 +45,20 @@ Ordem definida pelo usuário: seguir **1, 2, 3, …, 12**, sem antecipar módulo
 4. CRM — implementado: clientes compartilhados, compras/aparelhos/serviços, prazos de garantia, atividades, funil, responsáveis, lembretes e preferência de contato comercial.
 5. Financeiro — implementado: pagar/receber, baixas e estornos, contas, centros, conciliação manual, fluxo realizado/previsto, DRE gerencial, margens e consolidação por filial.
 6. Crediário — implementado: análise manual, limite com reserva de ofertas, venda financiada no PDV, contrato, parcelas, antecipação, recebimentos, estornos, renegociação e acompanhamento de atrasos integrados ao financeiro.
-7. Compras — futuro; estoque e contas a pagar.
+7. Compras — implementado: fornecedores compartilhados, rascunho/confirmação de pedidos, entregas parciais, conferência de unidades, estoque, contas a pagar, cancelamento de saldo e correção transacional de recebimentos.
 8. Relatórios — futuro; consolidação dos módulos operacionais.
 9. Funcionários e Permissões — futuro; apenas perfis mínimos do estoque nesta etapa.
 10. Filiais — futuro; apenas cadastro básico e saldos separados nesta etapa.
 11. Fiscal — futuro; integração homologada com provedor.
 12. Ponto — futuro; reutilização do projeto existente e contratação independente.
+
+## Compras e fornecedores
+
+Fornecedores reutilizam `catalog_entries` com perfil complementar e versão, sem duplicar IDs. Pedidos são por filial: rascunhos editáveis têm linhas JSON; a confirmação grava linhas imutáveis e snapshot do fornecedor. Entregas preservam referência única por empresa/fornecedor, itens, quantidades e unidades, com IMEI/série e procedência no domínio existente de estoque. Eventos e correções de recebimento são registros adicionais imutáveis para a role de runtime. RLS e chaves compostas protegem empresas; a API valida filiais e restringe o módulo à gestão.
+
+Recebimento bloqueia o pedido e produtos em ordem estável, confere saldo pendente e registra estoque/ledger e título a pagar na mesma transação. Versão e idempotência impedem duplicação após reenvio e excesso por concorrência. Títulos usam origem `purchase`, FK de recebimento e tratamento patrimonial, sem repetir CMV/despesa na DRE; pagamentos e estornos usam o financeiro existente. As movimentações não podem ser estornadas pelo estoque genérico, e os títulos não podem ser editados ou cancelados fora da origem.
+
+Cancelamento do pedido encerra somente saldo pendente e preserva entregas/dívidas. Correção de recebimento é integral: exige ausência de baixas ativas, saldo suficiente e nenhuma movimentação posterior de unidades individuais, compensa o ledger e cancela o título da entrega. O custo opcional do catálogo segue o último recebimento confirmado, não média ponderada; não é restaurado automaticamente ao estornar. Documentos são de conferência e não fiscais. Devolução comercial parcial, XML e operações fiscais exigem etapas próprias.
 
 ## Crediário próprio
 

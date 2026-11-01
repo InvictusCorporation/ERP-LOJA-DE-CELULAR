@@ -1,6 +1,6 @@
 # Invictus ERP Mobile
 
-Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira** e **6 — Crediário Próprio**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 7–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
+Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio** e **7 — Compras e Fornecedores**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 8–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
 ## Executar localmente
 
@@ -20,6 +20,8 @@ O banco PostgreSQL embarcado (PGlite) fica em `.data/invictus`. Os registros sob
 
 1. Em **Cadastros auxiliares**, crie categorias, marcas, modelos e fornecedores.
 2. Em **Produtos**, cadastre cada variação com seu SKU, cor, capacidade, preço e garantia. Celulares podem usar controle individual.
+   O cadastro é livre para qualquer produto, sem lista fechada de tipos. Escolha **Produto por quantidade** para controlar o saldo ou **Produto com controle individual — IMEI ou série** para rastrear cada unidade. Nome e categorias são livres; marca, modelo e especificação são opcionais. Crie suas próprias categorias em Cadastros auxiliares.
+   No cadastro, **Usar leitor** direciona a leitura USB/Bluetooth que funciona como teclado para o código de barras; Enter confirma a leitura sem enviar o formulário. **Escanear com câmera** lê a embalagem no navegador, mediante autorização e HTTPS ou localhost. A imagem não é enviada ao servidor; a câmera é desligada após a captura ou ao fechar. Confira nome, categoria e preços antes de salvar. A digitação permanece disponível.
 3. Pela ação de movimentar, registre uma entrada. Para aparelhos, informe IMEI válido ou série, procedência e custo individual.
 4. Consulte **Aparelhos e IMEIs** e **Movimentações**.
 5. Em **Inventário**, configure o estoque mínimo e registre uma contagem física. Divergências de aparelhos exigem reconciliar as unidades individualmente antes de concluir a contagem.
@@ -86,6 +88,18 @@ Transferências, saldos iniciais e ajustes patrimoniais não compõem a DRE. As 
 
 O método utiliza juros simples por principal de cada parcela, dias corridos/base 30 e vencimentos mensais; os valores das parcelas podem variar. Não há tarifas ou seguros adicionais. Limites do formulário são técnicos e não substituem a revisão das condições aplicáveis à empresa. Documentos registram aceite manual, sem assinatura eletrônica ou comprovação de quitação. Veja o [relatório do módulo 6](docs/ENTREGA-MODULO-6.md).
 
+## Demonstrar compras e fornecedores
+
+1. Em **Compras e fornecedores → Fornecedores**, cadastre ou revise os dados do fornecedor. O cadastro reaproveita fornecedores de Cadastros auxiliares, sem duplicá-los. Inativar impede novos pedidos e confirmações; os pedidos já confirmados e seus históricos permanecem.
+2. Em **Pedidos e recebimentos**, crie um pedido por filial. Selecione fornecedor e produtos livres do catálogo, informe quantidades, custos unitários positivos e previsão. Salve o rascunho e revise-o antes de **Confirmar pedido**. A confirmação preserva os itens e condições, sem enviar mensagens, movimentar estoque ou registrar pagamento.
+3. Em **Conferir recebimento**, informe referência única por fornecedor e entrega, vencimento e somente as quantidades fisicamente recebidas. Entregas parciais deixam o saldo pendente. Produtos individuais exigem uma série ou IMEI válido e procedência por unidade; são aceitas até 200 unidades identificadas por operação.
+4. A confirmação grava entrada de estoque e uma conta a pagar patrimonial pelo valor recebido na mesma transação. Marque a atualização do custo para usar o último custo de compra no cadastro; não há média ponderada. Custos históricos de vendas permanecem preservados. Compras de mercadoria não duplicam despesa na DRE.
+5. Pague o título em **Gestão financeira → Contas a pagar**. As baixas podem ser parciais e seguem o fluxo existente de contas, conciliação e estorno. O título mantém origem e valor do recebimento.
+6. Consulte histórico, quantidades por entrega, séries/IMEIs, contas e trilha do pedido. Imprima o pedido e a conferência do recebimento; exporte a página de pedidos ou fornecedores em CSV. Documentos são internos, sem emissão ou validação fiscal.
+7. **Cancelar saldo pendente** encerra somente a parte não entregue. Para corrigir uma entrega inteira, estorne primeiro eventuais pagamentos no financeiro e use **Estornar recebimento** em Compras. O sistema compensa quantidades e cancela somente o título daquela entrega; unidades movimentadas depois do recebimento ou saldo insuficiente bloqueiam a operação. O custo de catálogo não é restaurado automaticamente e deve ser revisado no cadastro quando necessário.
+
+Proprietário e gerente acessam Compras nas filiais autorizadas. Devoluções comerciais parciais ao fornecedor, importação de XML e emissão fiscal não foram implementadas nesta etapa. Veja o [relatório do módulo 7](docs/ENTREGA-MODULO-7.md).
+
 ## Verificações
 
 ```powershell
@@ -98,7 +112,7 @@ pnpm build
 
 Os testes de API usam PostgreSQL embarcado real, role sem privilégios de proprietário e políticas RLS. O teste de navegador cria uma empresa claramente identificada como teste. Para manter a demonstração separada, use `DATA_DIR=.data/e2e` ao iniciar a aplicação para esse teste.
 
-`pnpm test:e2e` executa os cinco fluxos anteriores e o crediário em dois grupos, reiniciando o servidor entre eles para respeitar o limite de cinco criações locais por IP em 15 minutos. Execute com a aplicação local parada e a base de teste configurada; o limite de segurança do produto permanece ativo.
+`pnpm test:e2e` executa os cinco fluxos iniciais e, no segundo grupo, crediário, cadastro com escaneamento e compras, reiniciando o servidor entre os grupos para respeitar o limite de cinco criações locais por IP em 15 minutos. Execute com a aplicação local parada e a base de teste configurada; o limite de segurança do produto permanece ativo.
 
 ## Documentação
 
@@ -110,5 +124,6 @@ Os testes de API usam PostgreSQL embarcado real, role sem privilégios de propri
 - [Relatório do CRM](docs/ENTREGA-MODULO-4.md)
 - [Relatório financeiro](docs/ENTREGA-MODULO-5.md)
 - [Relatório do crediário](docs/ENTREGA-MODULO-6.md)
+- [Relatório de compras e fornecedores](docs/ENTREGA-MODULO-7.md)
 
 Integrações de identidade, white label, assinaturas e ponto dependem da análise dos projetos existentes da Invictus. Não foi criado um segundo sistema de ponto.
