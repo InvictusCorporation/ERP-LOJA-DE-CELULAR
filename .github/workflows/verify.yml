@@ -1,4 +1,4 @@
-name: Verificar módulos 1 a 10
+name: Verificar módulos 1 a 11 (preparação fiscal)
 on: [push, pull_request]
 jobs:
   verify:

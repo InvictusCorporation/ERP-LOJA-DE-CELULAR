@@ -12,6 +12,9 @@ export const roleLabels: Record<string, string> = {
 };
 export const roleRights: Record<string, string[]> = {
   owner: [
+    "fiscal_read",
+    "fiscal_manage",
+    "fiscal_settings",
     "branch_read",
     "branch_transfer",
     "reports_read",
@@ -49,6 +52,8 @@ export const roleRights: Record<string, string[]> = {
     "service_deliver",
   ],
   manager: [
+    "fiscal_read",
+    "fiscal_manage",
     "branch_read",
     "branch_transfer",
     "reports_read",
@@ -96,10 +101,12 @@ export const roleRights: Record<string, string[]> = {
 };
 
 roleRights.administrator = roleRights.owner.filter(
-  (r) => !["branches", "credit_settings"].includes(r),
+  (r) => !["branches", "credit_settings", "fiscal_settings"].includes(r),
 );
 roleRights.seller = [...roleRights.cashier, "crm_read", "crm_manage"];
 roleRights.financial = [
+  "fiscal_read",
+  "fiscal_manage",
   "branch_read",
   "read",
   "cost",
@@ -109,6 +116,9 @@ roleRights.financial = [
   "credit_manage",
 ];
 export const permissionLabels: Record<string, string> = {
+  fiscal_read: "Consultar preparação fiscal e arquivos XML",
+  fiscal_manage: "Preparar documentos, classificar produtos e guardar XML",
+  fiscal_settings: "Configurar emitente e certificado fiscal",
   read: "Entrar e consultar estoque básico",
   cost: "Consultar custos do estoque",
   catalog: "Gerir produtos e cadastros",
@@ -150,8 +160,11 @@ export const reservedPermissions = [
   "users",
   "branches",
   "credit_settings",
+  "fiscal_settings",
 ];
 export const dependencies: Record<string, string[]> = {
+  fiscal_manage: ["fiscal_read"],
+  fiscal_settings: ["fiscal_read"],
   branch_transfer: ["branch_read", "stock"],
   catalog: ["cost"],
   adjust: ["stock"],

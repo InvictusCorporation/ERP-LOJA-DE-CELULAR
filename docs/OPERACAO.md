@@ -105,3 +105,12 @@ Transferências atualizam imediatamente os dois estoques após confirmação man
 Corrigir exige retorno integral, saldo do destino e versões físicas das unidades intactas. Se houve venda, saída/entrada posterior ou outra transferência de unidade identificada, registre nova transferência de retorno quando a unidade estiver disponível. Não estorne uma perna pelo estoque genérico nem edite a unidade diretamente no banco. A correção mantém cabeçalho/itens originais e referências de ambas as pernas. Compras e suas dívidas permanecem na filial de origem da compra.
 
 Para inativar, use os módulos de origem para resolver as pendências indicadas: transferir estoque, fechar caixas, entregar/encerrar ordens, receber ou cancelar saldo de pedidos, encerrar CRM/ofertas, quitar/cancelar títulos cabíveis, reconciliar movimentos sem conta, zerar/inativar contas e reatribuir a filial principal da equipe. Não mova saldos ou dívidas diretamente no banco. A reativação permite novas operações com os mesmos IDs e histórico. Não exclua filiais. Novos lançamentos em filial inativa recebem conflito, e a tela pode precisar ser atualizada.
+
+
+## Preparação fiscal e cofre A1
+
+Migração 202611010014_fiscal_preparation. Backup offline anterior em backups/pre-modulo11-20261101/invictus. Antes de produção, homologar migração, RLS, privilégios, restauração e concorrência no PostgreSQL externo. Não houve alteração de VPS, DNS ou projeto externo.
+
+A chave local fica em `<DATA_DIR>.fiscal-key` (arquivo binário de 32 bytes). `pnpm db:backup`, com a API parada e BACKUP_OFFLINE_ACK=yes, salva a chave em `<backup.tar.gz>.fiscal-key` quando não usa chave externa. `pnpm db:restore` recupera o companheiro para o diretório novo. Proteja ambos e teste recuperação; cópias offline manuais também precisam da chave. Produção exige FISCAL_ENCRYPTION_KEY (64 caracteres hexadecimais aleatórios) no gerenciador de segredos, com backup separado e seguro. Não versionar nem trocar sem recriptografia planejada. Configurar ACL do Windows/conta do serviço e HTTPS. Não existe recuperação de chave perdida. Remoção do certificado ativo não elimina backups históricos.
+
+Importação A1 confere a abertura com senha, não habilitação, titular ou cadeia/validade para emissão. Nenhuma integração oficial está ativa. XML importado é arquivo não verificado. Veja entrega do módulo 11 para pendências e fontes oficiais antes de configurar o provedor.

@@ -1,0 +1,85 @@
+.fiscal-panel {
+  min-width: 0;
+}
+.fiscal-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px;
+  border: 1px solid #bfd5ee;
+  background: #edf5ff;
+  color: #23466c;
+  border-radius: 12px;
+}
+.fiscal-banner svg {
+  flex-shrink: 0;
+}
+.fiscal-panel p,
+.fiscal-panel li {
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.fiscal-banner p {
+  margin: 6px 0 0;
+}
+.fiscal-card {
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e1e6ed;
+  border-radius: 12px;
+  min-width: 0;
+}
+.fiscal-card h3 {
+  margin: 0 0 10px;
+}
+.fiscal-card fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.fiscal-card input[type="file"] {
+  width: 100%;
+  font-size: 12px;
+  min-width: 0;
+}
+.fiscal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.fiscal-grid .field {
+  min-width: 0;
+}
+.fiscal-grid input,
+.fiscal-grid select,
+.fiscal-grid textarea {
+  width: 100%;
+}
+.fiscal-tabs {
+  flex-wrap: wrap;
+}
+.fiscal-card .employee-filters {
+  margin-top: 18px;
+}
+.fiscal-card .employee-table {
+  margin-bottom: 16px;
+}
+@media (max-width: 700px) {
+  .fiscal-grid {
+    grid-template-columns: 1fr;
+  }
+  .fiscal-card {
+    padding: 16px;
+  }
+  .fiscal-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .fiscal-tabs button {
+    white-space: normal;
+    text-align: left;
+    font-size: 12px;
+  }
+}

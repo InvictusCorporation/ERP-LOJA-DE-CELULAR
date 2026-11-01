@@ -1,6 +1,6 @@
 # Invictus ERP Mobile
 
-Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores**, **8 — Relatórios Gerenciais**, **9 — Funcionários e Permissões** e **10 — Gestão de Filiais**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. Os módulos 11–12 ainda não estão implementados. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
+Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores**, **8 — Relatórios Gerenciais**, **9 — Funcionários e Permissões**, **10 — Gestão de Filiais** e **11 — Gestão Fiscal (preparação)**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. O módulo 11 possui cadastro/preparação e cofre A1; emissão oficial depende de integração e homologação. O módulo 12 ainda não está implementado. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
 ## Executar localmente
 
@@ -164,3 +164,12 @@ Nome, cargo e função são específicos da empresa. Alterações não modificam
 7. Para inativar, resolva estoque, caixas, ordens, compras, CRM, ofertas vigentes, títulos, contas e movimentos financeiros sem conta. Reatribua a filial de trabalho da equipe quando necessário. Deve restar ao menos uma filial ativa. Dados anteriores ficam consultáveis; novas operações na unidade inativa são recusadas, inclusive em telas abertas anteriormente.
 
 Criar uma filial na empresa já provisionada funciona pelo proprietário também no runtime de produção, sob RLS; criar a empresa e identidades globais continua no provisionamento administrativo. Não há subdomínio, assinatura, remessa fiscal ou implantação externa automática. Veja [entrega do módulo 10](docs/ENTREGA-MODULO-10.md).
+
+
+## Demonstrar preparação fiscal
+
+Abra **Gestão fiscal → Emitente e certificado**. Selecione o estado, porte (MEI/ME/EPP/demais) e regime (MEI/SIMEI, Simples Nacional, Lucro Presumido ou Real, entre outros). O proprietário importa A1 .pfx/.p12 com senha e pode substituir/remover o segredo. A senha não é retornada nem incluída no Git.
+
+Em **Classificação dos produtos**, preencha referências fiscais com a contabilidade. Em **Vendas e serviços**, prepare NF-e/NFC-e a partir de vendas concluídas ou NFS-e da mão de obra de serviços reparados e entregues. Consulte o snapshot, exporte JSON ou arquive a preparação. **Arquivo XML** guarda arquivos não verificados, sem interpretar ou declarar autenticidade. Preparações e XML importado não comprovam emissão nem cancelamento.
+
+**Emissão oficial permanece pendente de integração/homologação.** O cadastro atual é preliminar, não calcula tributos e não cobre todos os campos de um emissor. Veja [entrega e recuperação do cofre do módulo 11](docs/ENTREGA-MODULO-11.md). Em produção configure a chave do cofre fora do Git; em backup local preserve o arquivo companheiro da chave.
