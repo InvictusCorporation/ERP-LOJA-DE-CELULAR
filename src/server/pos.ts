@@ -445,7 +445,7 @@ export class PosService {
             if (!item.unit_id || item.quantity !== 1)
               fail(400, "Selecione cada aparelho individualmente.");
             const [u] = await tx.query(
-              "SELECT * FROM device_units WHERE id=$1 AND product_id=$2 AND branch_id=$3 AND status='in_stock' FOR UPDATE",
+              "SELECT * FROM device_units WHERE id=$1 AND product_id=$2 AND branch_id=$3 AND status='in_stock' AND NOT reserved FOR UPDATE",
               [item.unit_id, p.id, s.branch_id],
             );
             if (!u) fail(409, "Aparelho indisponível nesta filial.");

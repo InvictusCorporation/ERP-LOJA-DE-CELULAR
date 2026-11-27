@@ -183,7 +183,7 @@ test("Financeiro completo: títulos, baixa após falha de rede, conciliação, D
     const r = await page.request.post("/api" + path, {
       data: body,
       headers: {
-        origin: "http://localhost:3000",
+        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000").origin,
         "x-csrf-token": me.csrf,
         "idempotency-key": randomUUID(),
       },

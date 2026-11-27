@@ -10,7 +10,10 @@ test("Filiais: cadastro, transferência mista, repetição segura, impressão, r
     email = `branches-browser-${stamp}@test.local`,
     password = "Branches-Browser-2026!";
   const setup = await page.request.post("/api/setup", {
-    headers: { origin: "http://localhost:3000" },
+    headers: {
+      origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+        .origin,
+    },
     data: {
       company: "Empresa de filiais automatizada",
       name: "Gestor de filiais teste",
@@ -32,7 +35,8 @@ test("Filiais: cadastro, transferência mista, repetição segura, impressão, r
   const post = async (path: string, data: any) => {
     const r = await page.request.post("/api" + path, {
       headers: {
-        origin: "http://localhost:3000",
+        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+          .origin,
         "x-csrf-token": me.csrf,
         "idempotency-key": randomUUID(),
       },
@@ -279,7 +283,8 @@ test("Filiais: cadastro, transferência mista, repetição segura, impressão, r
   ).toBeVisible();
   const forbidden = await page.request.post("/api/movements", {
     headers: {
-      origin: "http://localhost:3000",
+      origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+        .origin,
       "x-csrf-token": me.csrf,
       "idempotency-key": randomUUID(),
     },
@@ -344,12 +349,17 @@ test("Filiais: cadastro, transferência mista, repetição segura, impressão, r
     role: "cashier",
     branch_ids: [source],
   });
-  const staff = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const staff = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
+  });
   try {
     expect(
       (
         await staff.request.post("/api/login", {
-          headers: { origin: "http://localhost:3000" },
+          headers: {
+            origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+              .origin,
+          },
           data: { email: `branch-cash-${stamp}@test.local`, password },
         })
       ).ok(),

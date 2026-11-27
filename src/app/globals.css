@@ -369,12 +369,12 @@ tbody tr:hover {
   padding: 0 13px;
   margin-bottom: 13px;
 }
-nav {
+.sidebar nav {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
-nav button {
+.sidebar nav button {
   background: transparent;
   border: 0;
   display: flex;
@@ -387,11 +387,11 @@ nav button {
   font-size: 12px;
   font-weight: 500;
 }
-nav button:hover {
+.sidebar nav button:hover {
   background: #25262a;
   color: white;
 }
-nav button.active {
+.sidebar nav button.active {
   background: var(--yellow);
   color: #22210f;
   font-weight: 700;

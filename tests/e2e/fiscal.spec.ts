@@ -11,7 +11,10 @@ test("Fiscal: estados, porte, regime, A1 com senha, preparação e arquivo XML n
     email = `fiscal-browser-${stamp}@test.local`,
     password = randomUUID();
   const setup = await page.request.post("/api/setup", {
-    headers: { origin: "http://localhost:3000" },
+    headers: {
+      origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+        .origin,
+    },
     data: {
       company: "Empresa fiscal automatizada",
       name: "Fiscal teste",
@@ -33,7 +36,8 @@ test("Fiscal: estados, porte, regime, A1 com senha, preparação e arquivo XML n
   const post = async (path: string, data: any) => {
     const r = await page.request.post("/api" + path, {
       headers: {
-        origin: "http://localhost:3000",
+        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+          .origin,
         "x-csrf-token": me.csrf,
         "idempotency-key": randomUUID(),
       },
@@ -156,13 +160,11 @@ test("Fiscal: estados, porte, regime, A1 com senha, preparação e arquivo XML n
   expect((await jsonEvent).suggestedFilename()).toMatch(/\.json$/);
   const xml =
     '\ufeff<?xml version="1.0"?><arquivo>FICTÍCIO SEM VALIDADE</arquivo>';
-  await page
-    .getByLabel("Arquivo XML (até 64 KB)")
-    .setInputFiles({
-      name: "invalido.xml",
-      mimeType: "text/xml",
-      buffer: Buffer.from([60, 120, 62, 255, 60, 47, 120, 62]),
-    });
+  await page.getByLabel("Arquivo XML (até 64 KB)").setInputFiles({
+    name: "invalido.xml",
+    mimeType: "text/xml",
+    buffer: Buffer.from([60, 120, 62, 255, 60, 47, 120, 62]),
+  });
   await page
     .getByLabel("Descrição do arquivo", { exact: true })
     .fill("Arquivo com codificação inválida");
@@ -248,12 +250,17 @@ test("Fiscal: estados, porte, regime, A1 com senha, preparação e arquivo XML n
     role: "cashier",
     branch_ids: [branch],
   });
-  const staff = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const staff = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
+  });
   try {
     expect(
       (
         await staff.request.post("/api/login", {
-          headers: { origin: "http://localhost:3000" },
+          headers: {
+            origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+              .origin,
+          },
           data: { email: `fiscal-cash-${stamp}@test.local`, password },
         })
       ).ok(),

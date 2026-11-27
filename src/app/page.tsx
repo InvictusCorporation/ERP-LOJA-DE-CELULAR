@@ -40,6 +40,10 @@ import {
   UsersRound,
   ChartNoAxesCombined,
 } from "lucide-react";
+import StoreDashboard from "./store-dashboard";
+import UnitStockPanel from "./unit-stock-panel";
+import { ProductImage, ProductPhotoField } from "./product-image";
+import "./storefront.css";
 import PosPanel from "./pos-panel";
 import RepairsPanel from "./repairs-panel";
 import CrmPanel from "./crm-panel";
@@ -103,18 +107,18 @@ const labels: Row = {
 const nav = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "pos", label: "Frente de caixa", icon: ShoppingCart },
-  { id: "repairs", label: "Assistência técnica", icon: Wrench },
+  { id: "products", label: "Produtos e estoque", icon: Package },
+  { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "crm", label: "CRM e clientes", icon: UsersRound },
+  { id: "repairs", label: "Assistência técnica", icon: Wrench },
   { id: "finance", label: "Gestão financeira", icon: ChartNoAxesCombined },
+  { id: "reports", label: "Relatórios gerenciais", icon: ChartNoAxesCombined },
   { id: "credit", label: "Crediário próprio", icon: ShieldCheck },
   { id: "purchases", label: "Compras e fornecedores", icon: Package },
-  { id: "reports", label: "Relatórios gerenciais", icon: ChartNoAxesCombined },
   { id: "employees", label: "Funcionários e permissões", icon: UsersRound },
   { id: "branches", label: "Gestão de filiais", icon: Building2 },
   { id: "fiscal", label: "Gestão fiscal", icon: ShieldCheck },
   { id: "point", label: "Ponto e frequência", icon: UsersRound },
-  { id: "products", label: "Produtos", icon: Package },
-  { id: "units", label: "Aparelhos e IMEIs", icon: Smartphone },
   { id: "movements", label: "Movimentações", icon: ArrowDownUp },
   { id: "inventory", label: "Inventário", icon: ClipboardCheck },
   { id: "catalog", label: "Cadastros auxiliares", icon: Boxes },
@@ -244,7 +248,7 @@ export default function App() {
       const suffix = `branch_id=${branch}`;
       const cat = await request("/catalog");
       let result: Row = {};
-      if (view === "overview") result = await request(`/overview?${suffix}`);
+      if (view === "overview") result = {};
       else if (view === "products" || view === "inventory") {
         const r = await request(
           `/products?${suffix}&q=${encodeURIComponent(search)}&archived=${archived}&page=${page}`,
@@ -279,13 +283,13 @@ export default function App() {
       .then((r) => setUnits(r.items))
       .catch((e) => show(e.message, true));
   }, [modal, branch, moveProduct]);
-  const navigate = (id: string) => {
+  const navigate = (id: string, initialSearch = "") => {
     if (id === view) {
       setMenu(false);
       return;
     }
     setView(id);
-    setSearch("");
+    setSearch(initialSearch);
     setPage(1);
     setArchived(false);
     setData({});
@@ -336,6 +340,7 @@ export default function App() {
     try {
       if (modal === "product") {
         const b: Row = {
+          image_data: value("image_data"),
           name: value("name"),
           sku: value("sku"),
           barcode: value("barcode"),
@@ -462,7 +467,9 @@ export default function App() {
   if (loading)
     return (
       <div className="loading">
-        <div className="brand-mark">i</div>
+        <div className="brand-mark">
+          <Smartphone size={26} />
+        </div>
         <p>Carregando seu ambiente…</p>
       </div>
     );
@@ -792,11 +799,15 @@ export default function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">INVICTUS ERP MOBILE</div>
-              <h1>{current.label}</h1>
+              <h1>
+                {["products", "units"].includes(view)
+                  ? "Produtos e estoque"
+                  : current.label}
+              </h1>
               <p>
                 {
                   {
-                    overview: "Uma visão clara do seu estoque, em tempo real.",
+                    overview: "Acompanhe o movimento da sua loja.",
                     pos: "Vendas, pagamentos e caixa integrados ao seu estoque.",
                     crm: "Clientes, históricos e próximos passos do atendimento.",
                     finance:
@@ -834,15 +845,22 @@ export default function App() {
               </p>
             </div>
             <div className="heading-actions">
-              {can("stock") &&
-                ["overview", "movements", "units"].includes(view) && (
-                  <button className="secondary" onClick={() => open("move")}>
-                    <ArrowDownUp size={17} />
-                    Movimentar estoque
-                  </button>
-                )}
+              {view === "overview" && can("pos_sell") && (
+                <button className="primary" onClick={() => navigate("pos")}>
+                  <Plus size={18} /> Nova venda
+                </button>
+              )}
+              {can("stock") && ["movements", "units"].includes(view) && (
+                <button className="secondary" onClick={() => open("move")}>
+                  <ArrowDownUp size={17} />
+                  Movimentar estoque
+                </button>
+              )}
               {can("catalog") && ["overview", "products"].includes(view) && (
-                <button className="primary" onClick={() => open("product")}>
+                <button
+                  className={view === "overview" ? "secondary" : "primary"}
+                  onClick={() => open("product")}
+                >
                   <Plus size={18} />
                   Novo produto
                 </button>
@@ -970,135 +988,36 @@ export default function App() {
                 />
               )}
               {view === "overview" && (
-                <>
-                  <div className="metrics">
-                    <article className="metric featured">
-                      <div>
-                        <span>Unidades em estoque</span>
-                        <Boxes size={20} />
-                      </div>
-                      <strong>{data.metrics?.units ?? "—"}</strong>
-                      <small>Saldo físico da filial selecionada</small>
-                    </article>
-                    <article className="metric">
-                      <div>
-                        <span>Produtos ativos</span>
-                        <Package size={20} />
-                      </div>
-                      <strong>{data.metrics?.products ?? "—"}</strong>
-                      <small>Itens cadastrados no catálogo</small>
-                    </article>
-                    <article className="metric">
-                      <div>
-                        <span>Reposição necessária</span>
-                        <AlertTriangle size={20} />
-                      </div>
-                      <strong>{data.metrics?.low ?? "—"}</strong>
-                      <small>No mínimo definido ou abaixo dele</small>
-                    </article>
-                    <article className="metric">
-                      <div>
-                        <span>
-                          {can("cost")
-                            ? "Valor de custo"
-                            : "Filial selecionada"}
-                        </span>
-                        <Building2 size={20} />
-                      </div>
-                      <strong
-                        className={can("cost") ? "money" : "branch-value"}
-                      >
-                        {can("cost")
-                          ? data.metrics
-                            ? brl(data.metrics.cost_value)
-                            : "—"
-                          : me.branches.find((b) => b.id === branch)?.name}
-                      </strong>
-                      <small>
-                        {can("cost")
-                          ? "Estimativa pelo custo cadastrado"
-                          : "Estoque independente por unidade"}
-                      </small>
-                    </article>
-                  </div>
-                  <div className="overview-grid">
-                    <section className="panel">
-                      <div className="panel-heading">
-                        <div>
-                          <h2>Últimas movimentações</h2>
-                          <p>O que aconteceu no seu estoque</p>
-                        </div>
-                        <button
-                          className="text-button inline"
-                          onClick={() => navigate("movements")}
-                        >
-                          Ver histórico
-                          <ArrowUpRight size={16} />
-                        </button>
-                      </div>
-                      {data.movements?.length ? (
-                        movementTable(data.movements, true)
-                      ) : (
-                        <Empty
-                          icon={ArrowDownUp}
-                          title="Seu histórico começa aqui"
-                          description="As entradas, saídas e ajustes aparecerão aqui assim que forem registrados."
-                          action={
-                            can("stock") ? (
-                              <button
-                                className="secondary"
-                                onClick={() => open("move")}
-                              >
-                                Registrar movimentação
-                                <ArrowUpRight size={16} />
-                              </button>
-                            ) : undefined
-                          }
-                        />
-                      )}
-                    </section>
-                    <section className="panel quickstart">
-                      <Badge tone="yellow">OPERAÇÃO ORGANIZADA</Badge>
-                      <h2>Controle em cada detalhe.</h2>
-                      <p>
-                        Da entrada da mercadoria à conferência física, mantenha
-                        seu estoque rastreável.
-                      </p>
-                      <button onClick={() => navigate("products")}>
-                        <Package size={19} />
-                        <span>
-                          <strong>Catálogo de produtos</strong>
-                          <small>SKU, preços e garantias</small>
-                        </span>
-                        <ChevronRight size={18} />
-                      </button>
-                      <button onClick={() => navigate("units")}>
-                        <Smartphone size={19} />
-                        <span>
-                          <strong>Aparelhos individualizados</strong>
-                          <small>IMEI, série e procedência</small>
-                        </span>
-                        <ChevronRight size={18} />
-                      </button>
-                      <button onClick={() => navigate("inventory")}>
-                        <ClipboardCheck size={19} />
-                        <span>
-                          <strong>Conferência de estoque</strong>
-                          <small>Contagens e ajustes auditados</small>
-                        </span>
-                        <ChevronRight size={18} />
-                      </button>
-                    </section>
-                  </div>
-                  <div className="info-strip">
-                    <ShieldCheck size={19} />
-                    <span>
-                      Os indicadores refletem os registros da filial
-                      selecionada. Os demais módulos serão disponibilizados em
-                      etapas futuras.
-                    </span>
-                  </div>
-                </>
+                <StoreDashboard
+                  key={branch}
+                  branch={branch}
+                  navigate={navigate}
+                />
+              )}
+              {["products", "units", "movements"].includes(view) && (
+                <nav
+                  className="store-stock-tabs"
+                  aria-label="Áreas de produtos e estoque"
+                >
+                  <button
+                    className={view === "products" ? "active" : ""}
+                    onClick={() => navigate("products")}
+                  >
+                    Todos os produtos
+                  </button>
+                  <button
+                    className={view === "units" ? "active" : ""}
+                    onClick={() => navigate("units")}
+                  >
+                    Aparelhos / unidades
+                  </button>
+                  <button
+                    className={view === "movements" ? "active" : ""}
+                    onClick={() => navigate("movements")}
+                  >
+                    Movimentações
+                  </button>
+                </nav>
               )}
               {["products", "inventory"].includes(view) && (
                 <section className="panel">
@@ -1154,15 +1073,10 @@ export default function App() {
                               <tr key={item.id}>
                                 <td>
                                   <div className="product-cell">
-                                    <div
-                                      className={`product-avatar ${item.serialized ? "phone" : ""}`}
-                                    >
-                                      {item.serialized ? (
-                                        <Smartphone size={22} />
-                                      ) : (
-                                        <Package size={22} />
-                                      )}
-                                    </div>
+                                    <ProductImage
+                                      product={item}
+                                      className="compact"
+                                    />
                                     <div>
                                       <strong>{item.name}</strong>
                                       <small>
@@ -1406,68 +1320,15 @@ export default function App() {
                 </section>
               )}
               {view === "units" && (
-                <section className="panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>Rastreabilidade de aparelhos</h2>
-                      <p>Até 500 unidades mais recentes da filial</p>
-                    </div>
-                    <Badge>{data.items?.length || 0} aparelhos</Badge>
-                  </div>
-                  {data.items?.length ? (
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Aparelho</th>
-                            <th>IMEIs / série</th>
-                            <th>Procedência</th>
-                            {can("cost") && <th>Custo individual</th>}
-                            <th>Situação</th>
-                            <th>Recebido em</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.items.map((u: Row) => (
-                            <tr key={u.id}>
-                              <td>
-                                <strong>{u.product_name}</strong>
-                              </td>
-                              <td className="mono">
-                                {u.imeis.map((s: string) => (
-                                  <div key={s}>{s}</div>
-                                ))}
-                                <small>Série: {u.serial || "—"}</small>
-                              </td>
-                              <td className="reason">{u.provenance}</td>
-                              {can("cost") && (
-                                <td>{brl(u.acquisition_cost)}</td>
-                              )}
-                              <td>
-                                <Badge
-                                  tone={
-                                    u.status === "in_stock"
-                                      ? "green"
-                                      : "neutral"
-                                  }
-                                >
-                                  {labels[u.status]}
-                                </Badge>
-                              </td>
-                              <td className="muted">{date(u.created_at)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <Empty
-                      icon={Smartphone}
-                      title="Cada aparelho tem sua história"
-                      description="Cadastre um produto com controle individual e registre sua entrada com IMEI ou número de série."
-                    />
-                  )}
-                </section>
+                <UnitStockPanel
+                  key={branch}
+                  items={data.items || []}
+                  canEdit={can("stock")}
+                  canCost={can("cost")}
+                  mutate={mutate}
+                  reload={load}
+                  onNotice={show}
+                />
               )}
               {view === "catalog" && (
                 <div className="catalog-grid">
@@ -1691,6 +1552,9 @@ export default function App() {
                 {modal === "product" && (
                   <>
                     <div className="form-section">INFORMAÇÕES DO PRODUTO</div>
+                    <ProductPhotoField
+                      initialValue={selected?.image_data || ""}
+                    />
                     <ProductStockControl individual={!!selected?.serialized} />
                     <div className="form-grid">
                       <Field label="Nome do produto">

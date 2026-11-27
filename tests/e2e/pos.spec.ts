@@ -37,7 +37,7 @@ test("PDV completo: leitor, venda mista, falha de rede, devoluções, comprovant
     const res = await page.request.post(`/api${path}`, {
       data: body,
       headers: {
-        origin: "http://localhost:3000",
+        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000").origin,
         "x-csrf-token": me.csrf,
         "idempotency-key": randomUUID(),
       },

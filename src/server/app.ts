@@ -14,6 +14,7 @@ import cookieParser from "cookie-parser";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { Database } from "./db";
+import { StorefrontService } from "./storefront";
 import { PosService } from "./pos";
 import { RepairService } from "./repairs";
 import { CrmService } from "./crm";
@@ -65,6 +66,7 @@ const cookieOptions = () => ({
 class ApiController {
   constructor(
     @Inject(Database) private db: Database,
+    @Inject(StorefrontService) private storefront: StorefrontService,
     @Inject(InventoryService) private inventory: InventoryService,
     @Inject(PosService) private pos: PosService,
     @Inject(RepairService) private repairs: RepairService,
@@ -579,6 +581,17 @@ class ApiController {
       return this.pos.refund(i, saleRefund[1], body, key);
     if (path === "/pos/report" && method === "GET")
       return this.pos.report(i, String(req.query.branch_id || ""));
+    if (path === "/dashboard" && method === "GET")
+      return this.storefront.dashboard(
+        i,
+        String(req.query.branch_id || ""),
+        req.query.days,
+      );
+    const unitDetails = path.match(/^\/units\/([\w-]+)\/(details|history)$/);
+    if (unitDetails && method === "GET" && unitDetails[2] === "history")
+      return this.storefront.unit(i, unitDetails[1]);
+    if (unitDetails && method === "POST" && unitDetails[2] === "details")
+      return this.storefront.saveUnit(i, unitDetails[1], body, key);
     if (path === "/overview" && method === "GET")
       return this.inventory.overview(i, String(req.query.branch_id || ""));
     if (path === "/products" && method === "GET")
@@ -591,6 +604,7 @@ class ApiController {
           z.coerce.number().int().min(1).max(100000),
           req.query.page || 1,
         ),
+        req.query.category_id ? String(req.query.category_id) : null,
       );
     if (path === "/products" && method === "POST")
       return this.inventory.saveProduct(i, body, key);
@@ -669,7 +683,7 @@ class ApiController {
         : null;
       return this.db.transaction(i.tenant_id, async (tx) => {
         const units = await tx.query(
-          `SELECT d.*,p.name AS product_name,coalesce(array_agg(di.imei) FILTER(WHERE di.imei IS NOT NULL),'{}') AS imeis FROM device_units d JOIN products p ON p.id=d.product_id LEFT JOIN device_identifiers di ON di.unit_id=d.id WHERE d.branch_id=$1 AND ($2::uuid IS NULL OR d.product_id=$2) GROUP BY d.id,p.name ORDER BY d.created_at DESC LIMIT 500`,
+          `SELECT d.*,p.name AS product_name,p.image_data,p.price,p.condition,p.color,p.capacity,p.brand_id,c.name AS brand_name,coalesce(array_agg(di.imei) FILTER(WHERE di.imei IS NOT NULL),'{}') AS imeis FROM device_units d JOIN products p ON p.id=d.product_id LEFT JOIN catalog_entries c ON c.id=p.brand_id LEFT JOIN device_identifiers di ON di.unit_id=d.id WHERE d.branch_id=$1 AND ($2::uuid IS NULL OR d.product_id=$2) GROUP BY d.id,p.id,c.name ORDER BY d.created_at DESC LIMIT 500`,
           [branch, productId],
         );
         if (!permissions(i).includes("cost"))
@@ -856,6 +870,10 @@ export async function createApp(db: Database) {
         useValue: new CrmService(db, new InventoryService(db)),
       },
       { provide: Database, useValue: db },
+      {
+        provide: StorefrontService,
+        useValue: new StorefrontService(db, new InventoryService(db)),
+      },
       { provide: InventoryService, useValue: new InventoryService(db) },
       {
         provide: PosService,

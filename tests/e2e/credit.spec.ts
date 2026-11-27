@@ -38,7 +38,7 @@ test("Crediário: análise, oferta, venda no caixa, contrato, antecipação e re
       headers: {
         "x-csrf-token": me.csrf,
         "idempotency-key": randomUUID(),
-        origin: "http://localhost:3000",
+        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000").origin,
       },
     });
     expect(r.ok(), await r.text()).toBe(true);

@@ -595,7 +595,9 @@ test("Filiais: cadastro, operação isolada, transferências atômicas e encerra
               name: "Conta inativa",
               kind: "bank",
               opening_cents: 0,
-              opening_on: new Date().toISOString().slice(0, 10),
+              opening_on: new Date().toLocaleDateString("sv-SE", {
+                timeZone: "America/Fortaleza",
+              }),
             })
           ).status,
           409,
