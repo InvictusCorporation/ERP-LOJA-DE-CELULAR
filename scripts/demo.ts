@@ -11,6 +11,7 @@ async function main() {
       "Demonstração disponível somente em ambiente local temporário.",
     );
   process.env.APP_ORIGIN = "http://localhost:3020";
+  process.env.WHATSAPP_ENABLED = "false";
   process.env.FISCAL_ENCRYPTION_KEY = randomBytes(32).toString("hex");
   const db = new Database();
   await db.open("memory://");

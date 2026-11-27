@@ -33,6 +33,10 @@ O banco PostgreSQL embarcado (PGlite) fica em `.data/invictus`. Os registros sob
 
 Em **Gestão de filiais**, o proprietário cadastra e administra suas unidades. Em **Funcionários e permissões**, proprietário e administrador gerem a equipe. Os perfis padrão são proprietário, administrador, gerente, vendedor, operador de caixa, técnico, financeiro, estoquista e consulta. O caixa vende e movimenta seu caixa sem descontos/devoluções por padrão; técnicos trabalham em ordens atribuídas, sem custos comerciais por padrão. Exceções individuais são conferidas pelo servidor e suas dependências. Estoquistas também podem transferir mercadorias entre duas filiais autorizadas; a configuração individual pode restringir essa ação.
 
+## Comprovantes e WhatsApp
+
+O caixa permite imprimir, baixar e preparar o comprovante para envio manual pelo WhatsApp. O aviso automático de aparelho pronto está preparado com fila transacional e adaptador da API oficial da Meta; continua desativado até conectar a conta da loja e configurar o template aprovado. Veja [configuração, estados e testes](docs/COMPROVANTES-E-WHATSAPP.md).
+
 ## Demonstrar o PDV
 
 1. Abra **Frente de caixa**, selecione um caixa e informe o saldo inicial em dinheiro.

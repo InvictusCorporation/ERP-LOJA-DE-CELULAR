@@ -33,6 +33,7 @@ import {
 import { toCents, formatCents } from "../shared/money";
 import "./pos.css";
 import { ProductImage } from "./product-image";
+import ReceiptActions from "./receipt-actions";
 import CreditDocument from "./credit-document";
 
 type Row = Record<string, any>;
@@ -140,75 +141,6 @@ function DialogBox({
         {children}
       </section>
     </div>
-  );
-}
-function DownloadReceipt({ receipt }: { receipt: Row }) {
-  const r = receipt;
-  const download = () => {
-    const text = [
-      r.sale.company_name,
-      r.sale.branch_name,
-      "COMPROVANTE NÃO FISCAL",
-      r.sale.receipt_code,
-      ...(r.sale.customer_name ? ["Cliente: " + r.sale.customer_name] : []),
-      when(r.sale.created_at),
-      `Operador: ${r.sale.operator_name}`,
-      `Situação: ${statusNames[r.sale.status]}`,
-      "",
-      ...r.items.map(
-        (l: Row) =>
-          `${l.quantity}x ${l.product_name} [${l.sku}] ${l.identifiers}\n${formatCents(l.net_cents)} · Garantia: ${l.warranty_days} dias ${l.warranty_terms}`,
-      ),
-      `Subtotal: ${formatCents(r.sale.subtotal_cents)}`,
-      `Desconto: ${formatCents(r.sale.discount_cents)}`,
-      `TOTAL: ${formatCents(r.sale.total_cents)}`,
-      ...r.payments.map(
-        (p: Row) =>
-          `${methodNames[p.method]}: recebido ${formatCents(p.tendered_cents)} · referência ${p.reference || "—"}`,
-      ),
-      `Troco: ${formatCents(r.sale.change_cents)}`,
-      ...(r.credit
-        ? [
-            `Crediário: ${r.credit.code} · Situação: ${r.credit.status}`,
-            `Principal financiado: ${formatCents(r.credit.simulation.principal_cents)} · Juros previstos: ${formatCents(r.credit.simulation.interest_cents)}`,
-            ...r.credit.simulation.lines.map(
-              (l: Row) =>
-                `Parcela ${l.number} · ${l.due_on} · ${formatCents(l.amount_cents)}`,
-            ),
-            "Condições e revisões constam no contrato. Este comprovante não declara quitação das parcelas.",
-          ]
-        : []),
-      ...r.returns.map(
-        (x: Row) =>
-          `${x.kind === "cancel" ? "Cancelamento" : "Devolução"} ${when(x.created_at)}: ${formatCents(x.total_cents)} · ${x.reason}`,
-      ),
-      "",
-      "Pagamentos Pix/cartão registrados manualmente. Este comprovante não substitui documento fiscal.",
-    ].join("\n");
-    const url = URL.createObjectURL(
-      new Blob([text], { type: "text/plain;charset=utf-8" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `comprovante-${r.sale.id}.txt`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-  return (
-    <>
-      <button
-        type="button"
-        className="secondary"
-        onClick={() => window.print()}
-      >
-        <Printer size={16} />
-        Imprimir
-      </button>
-      <button type="button" className="secondary" onClick={download}>
-        <Download size={16} />
-        Baixar comprovante
-      </button>
-    </>
   );
 }
 export default function PosPanel({
@@ -505,7 +437,11 @@ export default function PosPanel({
           );
           const p = r.items.find((p: Row) => p.id === l.product_id);
           if (!p) throw new Error(`Produto indisponível: ${l.name}`);
-          return { ...l, price: toCents(p.price), stock: p.available_quantity ?? p.quantity };
+          return {
+            ...l,
+            price: toCents(p.price),
+            stock: p.available_quantity ?? p.quantity,
+          };
         }),
       );
       setCart(updated);
@@ -1663,7 +1599,11 @@ export default function PosPanel({
             </p>
           </div>
           <div className="modal-footer pos-receipt-actions no-print">
-            <DownloadReceipt receipt={receipt} />
+            <ReceiptActions
+              receipt={receipt}
+              canContact={can("customer_lookup")}
+              onNotice={onNotice}
+            />
             {receipt.credit && (
               <button
                 className="secondary"

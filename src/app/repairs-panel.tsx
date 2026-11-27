@@ -1,4 +1,5 @@
 "use client";
+import ServiceNotices from "./service-notices";
 import {
   useCallback,
   useEffect,
@@ -690,6 +691,17 @@ export default function RepairsPanel({
               </div>
               <Badge status={o!.status} />
             </div>
+            {detail?.notifications && (
+              <ServiceNotices
+                order={o!}
+                notifications={detail.notifications}
+                manage={manage}
+                busy={busy}
+                mutate={mutate}
+                reload={reload}
+                onNotice={onNotice}
+              />
+            )}
             <div className="service-action-bar">
               {manage && editable && (
                 <button

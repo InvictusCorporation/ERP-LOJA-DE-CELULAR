@@ -34,7 +34,8 @@ test("Assistência completa: fotos, orçamento, aprovação, peças e entrega co
     const r = await page.request.post("/api" + path, {
       data: body,
       headers: {
-        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000").origin,
+        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+          .origin,
         "x-csrf-token": me.csrf,
         "idempotency-key": randomUUID(),
       },
@@ -226,6 +227,9 @@ test("Assistência completa: fotos, orçamento, aprovação, peças e entrega co
     .getByRole("button", { name: "Salvar e registrar", exact: true })
     .click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Aviso automático de aparelho pronto" }),
+  ).toContainText("Aguardando configuração");
   await page
     .getByRole("button", { name: "Registrar entrega", exact: true })
     .click();

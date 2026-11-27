@@ -514,11 +514,13 @@ class ApiController {
     const repair = path.match(/^\/repairs\/([\w-]+)$/);
     if (repair && method === "GET") return this.repairs.detail(i, repair[1]);
     const repairAction = path.match(
-      /^\/repairs\/([\w-]+)\/(info|diagnosis|quote|approval|parts|work|cancel|delivery|photos)$/,
+      /^\/repairs\/([\w-]+)\/(info|diagnosis|quote|approval|parts|work|cancel|delivery|photos|notification-retry)$/,
     );
     if (repairAction && method === "POST") {
       const id = repairAction[1];
       switch (repairAction[2]) {
+        case "notification-retry":
+          return this.repairs.retryNotice(i, id, body, key);
         case "info":
           return this.repairs.info(i, id, body, key);
         case "diagnosis":
@@ -573,6 +575,11 @@ class ApiController {
         ),
         String(req.query.q || ""),
       );
+    const receiptContact = path.match(
+      /^\/pos\/sales\/([\w-]+)\/receipt-contact$/,
+    );
+    if (receiptContact && method === "GET")
+      return this.pos.receiptContact(i, receiptContact[1]);
     const saleReceipt = path.match(/^\/pos\/sales\/([\w-]+)$/);
     if (saleReceipt && method === "GET")
       return this.pos.receipt(i, saleReceipt[1]);
