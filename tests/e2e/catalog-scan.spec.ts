@@ -26,7 +26,7 @@ test("Catálogo: acessórios, leitor físico, câmera, permissão negada e apare
   await page.getByLabel("E-mail", { exact: true }).fill(email);
   await page.getByLabel("Senha", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Entrar no sistema" }).click();
-  await page.getByRole("button", { name: "Produtos", exact: true }).click();
+  await page.getByRole("button", { name: "Produtos e estoque", exact: true }).click();
   const save = () =>
     page
       .getByRole("button", { name: "Salvar e registrar", exact: true })

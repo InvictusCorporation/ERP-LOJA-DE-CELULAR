@@ -10,7 +10,10 @@ test("Ponto: preparação cadastral, vínculos existentes, resposta perdida, pac
     email = `point-browser-${stamp}@test.local`,
     password = randomUUID();
   const setup = await page.request.post("/api/setup", {
-    headers: { origin: "http://localhost:3000" },
+    headers: {
+      origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+        .origin,
+    },
     data: {
       company: "Empresa de ponto automatizada",
       name: "Gestor ponto navegador",
@@ -33,7 +36,7 @@ test("Ponto: preparação cadastral, vínculos existentes, resposta perdida, pac
   const me = await (await page.request.get("/api/me")).json(),
     branch = me.branches[0].id;
   const headers = {
-    origin: "http://localhost:3000",
+    origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000").origin,
     "x-csrf-token": me.csrf,
     "idempotency-key": randomUUID(),
   };
@@ -199,12 +202,17 @@ test("Ponto: preparação cadastral, vínculos existentes, resposta perdida, pac
     },
   });
   expect(created.ok(), await created.text()).toBe(true);
-  const staff = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const staff = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
+  });
   try {
     expect(
       (
         await staff.request.post("/api/login", {
-          headers: { origin: "http://localhost:3000" },
+          headers: {
+            origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+              .origin,
+          },
           data: { email: `point-admin-${stamp}@test.local`, password },
         })
       ).ok(),

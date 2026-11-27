@@ -31,7 +31,7 @@ test("cadastro, entrada, inventário, estoque mínimo e persistência após reca
   await page.getByLabel("Preço de venda (R$)").fill("25");
   await page.getByRole("button", { name: "Salvar e registrar" }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  await page.getByRole("button", { name: "Produtos", exact: true }).click();
+  await page.getByRole("button", { name: "Produtos e estoque", exact: true }).click();
   await expect(
     page.getByText("Cabo USB-C verificado", { exact: true }),
   ).toBeVisible();
@@ -85,7 +85,7 @@ test("cadastro, entrada, inventário, estoque mínimo e persistência após reca
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(page.getByText("Repor estoque", { exact: true })).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Produtos", exact: true }).click();
+  await page.getByRole("button", { name: "Produtos e estoque", exact: true }).click();
   await expect(
     page.getByText("Cabo USB-C verificado", { exact: true }),
   ).toBeVisible();
@@ -96,7 +96,7 @@ test("cadastro, entrada, inventário, estoque mínimo e persistência após reca
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("heading", { name: "Produtos", exact: true }),
+    page.getByRole("heading", { name: "Produtos e estoque", exact: true }),
   ).toBeVisible();
   await expect
     .poll(async () => {
@@ -106,7 +106,7 @@ test("cadastro, entrada, inventário, estoque mínimo e persistência após reca
     .toBeLessThanOrEqual(0);
   await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
   await expect(page.locator(".sidebar")).toHaveClass("sidebar open");
-  await page.getByRole("button", { name: "Produtos", exact: true }).click();
+  await page.getByRole("button", { name: "Produtos e estoque", exact: true }).click();
   await expect
     .poll(async () => {
       const box = await page.locator(".sidebar").boundingBox();

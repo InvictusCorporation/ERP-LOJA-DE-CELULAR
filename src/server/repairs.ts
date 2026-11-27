@@ -1,3 +1,4 @@
+import { queueReadyNotice, whatsappConfig } from "./whatsapp";
 import { activeTeam } from "./access-team";
 import { randomUUID, createHash } from "node:crypto";
 import sharp from "sharp";
@@ -354,7 +355,16 @@ export class RepairService {
               [id, i.branch_ids, this.manages(i), i.user_id, o.imei, o.serial],
             )
           : [];
+      const notices = await tx.query(
+        "SELECT id,state,attempts,last_error,provider_message_id,created_at,updated_at FROM repair_notifications WHERE order_id=$1 ORDER BY created_at DESC LIMIT 10",
+        [id],
+      );
+      const wa = whatsappConfig();
       return {
+        notifications: {
+          configured: !!wa && wa.tenant === i.tenant_id,
+          items: notices,
+        },
         order: { ...o, ...names },
         quotes,
         items,
@@ -372,6 +382,43 @@ export class RepairService {
         },
       };
     });
+  }
+  async retryNotice(i: Identity, id: string, body: unknown, key: unknown) {
+    permit(i, "service_manage");
+    const b = validate(z.object({ notification_id: uuid }).strict(), body);
+    return this.inventory.write(
+      i,
+      key,
+      { action: "repair.notification.retry", id, b },
+      async (tx) => {
+        const o = await this.order(tx, i, id);
+        if (o.status !== "ready")
+          fail(409, "A ordem não está pronta para retirada.");
+        const [n] = await tx.query(
+          "SELECT * FROM repair_notifications WHERE id=$1 AND order_id=$2 FOR UPDATE",
+          [b.notification_id, id],
+        );
+        if (!n || !["blocked", "failed"].includes(n.state))
+          fail(
+            409,
+            "Este aviso não permite nova tentativa automática. Confira o resultado no provedor.",
+          );
+        const [same] = await tx.query(
+          "SELECT ready_at=$1::timestamptz AS ok FROM repair_orders WHERE id=$2",
+          [n.ready_at, id],
+        );
+        if (!same?.ok)
+          fail(409, "O aviso pertence a uma etapa anterior do reparo.");
+        await tx.query(
+          "UPDATE repair_notifications SET state='queued',last_error='',updated_at=now() WHERE id=$1 RETURNING id",
+          [n.id],
+        );
+        await this.event(tx, i, o, "notification_retried", {
+          notification_id: n.id,
+        });
+        return { ok: true };
+      },
+    );
   }
   async info(i: Identity, id: string, body: unknown, key: unknown) {
     permit(i, "service_manage");
@@ -766,6 +813,7 @@ export class RepairService {
             "UPDATE repair_orders SET status='ready',work_report=$1,ready_at=now(),version=version+1 WHERE id=$2 RETURNING id",
             [b.work_report, id],
           );
+          await queueReadyNotice(tx, i.tenant_id, o.branch_id, id);
           await this.event(tx, i, o, "ready", {
             work_report: b.work_report,
             warranty_days: o.warranty_days,

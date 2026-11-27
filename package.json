@@ -9,11 +9,13 @@
     "build": "prisma generate && next build && tsc -p tsconfig.server.json",
     "start": "node dist/scripts/start.js",
     "test": "tsc -p tsconfig.server.json && node --test --test-concurrency=1 dist/tests/*.test.js",
-    "test:e2e": "playwright test stock.spec.ts pos.spec.ts repairs.spec.ts crm.spec.ts finance.spec.ts && playwright test credit.spec.ts catalog-scan.spec.ts purchases.spec.ts reports.spec.ts employees.spec.ts && playwright test branches.spec.ts fiscal.spec.ts point.spec.ts",
+    "test:e2e": "playwright test stock.spec.ts pos.spec.ts repairs.spec.ts crm.spec.ts finance.spec.ts && playwright test credit.spec.ts catalog-scan.spec.ts purchases.spec.ts reports.spec.ts employees.spec.ts && playwright test branches.spec.ts fiscal.spec.ts point.spec.ts storefront.spec.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "db:migrate": "prisma migrate deploy",
     "db:backup": "tsc -p tsconfig.server.json && node dist/scripts/backup.js",
-    "db:restore": "tsc -p tsconfig.server.json && node dist/scripts/restore.js"
+    "db:restore": "tsc -p tsconfig.server.json && node dist/scripts/restore.js",
+    "demo:api": "tsc -p tsconfig.server.json && node dist/scripts/demo.js",
+    "demo:web": "next dev --hostname 127.0.0.1 --port 3020"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",

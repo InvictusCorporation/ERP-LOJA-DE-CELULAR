@@ -666,6 +666,7 @@ test("Assistência: atendimento, aprovação, peças, fotos, garantia e entrega 
           ).status,
           400,
         );
+        assert.equal((await detail()).notifications.items.length, 1);
         const key = randomUUID(),
           body = {
             version: await version(),

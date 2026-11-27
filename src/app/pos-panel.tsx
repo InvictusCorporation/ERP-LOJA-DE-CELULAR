@@ -32,6 +32,8 @@ import {
 } from "lucide-react";
 import { toCents, formatCents } from "../shared/money";
 import "./pos.css";
+import { ProductImage } from "./product-image";
+import ReceiptActions from "./receipt-actions";
 import CreditDocument from "./credit-document";
 
 type Row = Record<string, any>;
@@ -43,6 +45,8 @@ type CartLine = {
   sku: string;
   price: number;
   stock: number;
+  image_data?: string;
+  serialized?: boolean;
   identifiers?: string;
 };
 type Pay = { method: string; amount: string; reference: string };
@@ -139,75 +143,6 @@ function DialogBox({
     </div>
   );
 }
-function DownloadReceipt({ receipt }: { receipt: Row }) {
-  const r = receipt;
-  const download = () => {
-    const text = [
-      r.sale.company_name,
-      r.sale.branch_name,
-      "COMPROVANTE NÃO FISCAL",
-      r.sale.receipt_code,
-      ...(r.sale.customer_name ? ["Cliente: " + r.sale.customer_name] : []),
-      when(r.sale.created_at),
-      `Operador: ${r.sale.operator_name}`,
-      `Situação: ${statusNames[r.sale.status]}`,
-      "",
-      ...r.items.map(
-        (l: Row) =>
-          `${l.quantity}x ${l.product_name} [${l.sku}] ${l.identifiers}\n${formatCents(l.net_cents)} · Garantia: ${l.warranty_days} dias ${l.warranty_terms}`,
-      ),
-      `Subtotal: ${formatCents(r.sale.subtotal_cents)}`,
-      `Desconto: ${formatCents(r.sale.discount_cents)}`,
-      `TOTAL: ${formatCents(r.sale.total_cents)}`,
-      ...r.payments.map(
-        (p: Row) =>
-          `${methodNames[p.method]}: recebido ${formatCents(p.tendered_cents)} · referência ${p.reference || "—"}`,
-      ),
-      `Troco: ${formatCents(r.sale.change_cents)}`,
-      ...(r.credit
-        ? [
-            `Crediário: ${r.credit.code} · Situação: ${r.credit.status}`,
-            `Principal financiado: ${formatCents(r.credit.simulation.principal_cents)} · Juros previstos: ${formatCents(r.credit.simulation.interest_cents)}`,
-            ...r.credit.simulation.lines.map(
-              (l: Row) =>
-                `Parcela ${l.number} · ${l.due_on} · ${formatCents(l.amount_cents)}`,
-            ),
-            "Condições e revisões constam no contrato. Este comprovante não declara quitação das parcelas.",
-          ]
-        : []),
-      ...r.returns.map(
-        (x: Row) =>
-          `${x.kind === "cancel" ? "Cancelamento" : "Devolução"} ${when(x.created_at)}: ${formatCents(x.total_cents)} · ${x.reason}`,
-      ),
-      "",
-      "Pagamentos Pix/cartão registrados manualmente. Este comprovante não substitui documento fiscal.",
-    ].join("\n");
-    const url = URL.createObjectURL(
-      new Blob([text], { type: "text/plain;charset=utf-8" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `comprovante-${r.sale.id}.txt`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-  return (
-    <>
-      <button
-        type="button"
-        className="secondary"
-        onClick={() => window.print()}
-      >
-        <Printer size={16} />
-        Imprimir
-      </button>
-      <button type="button" className="secondary" onClick={download}>
-        <Download size={16} />
-        Baixar comprovante
-      </button>
-    </>
-  );
-}
 export default function PosPanel({
   branch,
   permissions,
@@ -215,6 +150,20 @@ export default function PosPanel({
   onNotice,
 }: Props) {
   const can = (p: string) => permissions.includes(p);
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<Row[]>([]);
+  useEffect(() => {
+    let alive = true;
+    get("/catalog")
+      .then((r) => {
+        if (alive)
+          setCategories(r.items.filter((c: Row) => c.kind === "category"));
+      })
+      .catch((e) => onNotice(e.message, true));
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [creditMode, setCreditMode] = useState(false);
   const [creditQuery, setCreditQuery] = useState("");
   const [creditOffers, setCreditOffers] = useState<Row[]>([]);
@@ -267,7 +216,7 @@ export default function PosPanel({
   useEffect(() => {
     let alive = true;
     const timer = setTimeout(() => {
-      if (dialog !== "checkout" || customerQuery.trim().length < 2) {
+      if (!can("customer_lookup") || customerQuery.trim().length < 2) {
         setCustomerMatches([]);
         return;
       }
@@ -326,9 +275,24 @@ export default function PosPanel({
   useEffect(() => {
     let active = true;
     const timer = setTimeout(() => {
-      get(`/products?branch_id=${branch}&q=${encodeURIComponent(query)}`)
+      get(
+        `/products?branch_id=${branch}&q=${encodeURIComponent(query)}${category ? `&category_id=${category}` : ""}`,
+      )
         .then((r) => {
-          if (active) setItems(r.items.filter((p: Row) => p.active));
+          if (active)
+            setItems(
+              r.items
+                .filter((p: Row) => p.active)
+                .sort(
+                  (a: Row, b: Row) =>
+                    Number(b.serialized) - Number(a.serialized) ||
+                    a.name.localeCompare(b.name, "pt-BR"),
+                )
+                .map((p: Row) => ({
+                  ...p,
+                  quantity: p.available_quantity ?? p.quantity,
+                })),
+            );
         })
         .catch((e) => onNotice(e.message, true));
     }, 180);
@@ -336,7 +300,7 @@ export default function PosPanel({
       active = false;
       clearTimeout(timer);
     };
-  }, [branch, query]);
+  }, [branch, query, category, receipt]);
   const addLine = (product: Row, unit?: Row) => {
     if (!can("pos_sell")) return;
     const exists = cart.find(
@@ -367,6 +331,8 @@ export default function PosPanel({
       return;
     }
     const line: CartLine = {
+      image_data: product.image_data,
+      serialized: product.serialized,
       product_id: product.id,
       quantity: 1,
       unit_id: unit?.id,
@@ -403,7 +369,9 @@ export default function PosPanel({
         const r = await get(
           `/units?branch_id=${branch}&product_id=${product.id}`,
         );
-        setUnits(r.items.filter((u: Row) => u.status === "in_stock"));
+        setUnits(
+          r.items.filter((u: Row) => u.status === "in_stock" && !u.reserved),
+        );
         setUnitProduct(product);
       } catch (e: any) {
         onNotice(e.message, true);
@@ -421,6 +389,29 @@ export default function PosPanel({
           p.barcode === query.trim() ||
           p.sku.toLowerCase() === query.trim().toLowerCase(),
       );
+      if (!exact && r.items.length === 1 && r.items[0].serialized) {
+        const product = r.items[0];
+        const units = await get(
+          `/units?branch_id=${branch}&product_id=${product.id}`,
+        );
+        const matched = units.items.find(
+          (u: Row) =>
+            u.status === "in_stock" &&
+            !u.reserved &&
+            (u.serial === query.trim() || u.imeis.includes(query.trim())),
+        );
+        if (matched) {
+          addLine(
+            {
+              ...product,
+              quantity: product.available_quantity ?? product.quantity,
+            },
+            matched,
+          );
+          setQuery("");
+          return;
+        }
+      }
       if (!exact) {
         onNotice(
           "Código não encontrado. Selecione o produto nos resultados.",
@@ -428,7 +419,10 @@ export default function PosPanel({
         );
         return;
       }
-      await add(exact);
+      await add({
+        ...exact,
+        quantity: exact.available_quantity ?? exact.quantity,
+      });
       setQuery("");
     } catch (e: any) {
       onNotice(e.message, true);
@@ -443,7 +437,11 @@ export default function PosPanel({
           );
           const p = r.items.find((p: Row) => p.id === l.product_id);
           if (!p) throw new Error(`Produto indisponível: ${l.name}`);
-          return { ...l, price: toCents(p.price), stock: p.quantity };
+          return {
+            ...l,
+            price: toCents(p.price),
+            stock: p.available_quantity ?? p.quantity,
+          };
         }),
       );
       setCart(updated);
@@ -502,14 +500,12 @@ export default function PosPanel({
     setPayments(allocateRefund(value));
     setDialog(kind);
   };
-  const beginCheckout = () => {
+  const beginCheckout = (method = "cash") => {
     try {
       const d = amountOf(discount);
       if (!cart.length || subtotal - d <= 0)
         throw new Error("Adicione produtos e confira o total da venda.");
-      setPayments([
-        { method: "cash", amount: decimal(subtotal - d), reference: "" },
-      ]);
+      setPayments([{ method, amount: decimal(subtotal - d), reference: "" }]);
       setCreditMode(false);
       setSelectedCredit(null);
       setCreditQuery("");
@@ -816,12 +812,34 @@ export default function PosPanel({
               <input
                 ref={scanRef}
                 aria-label="Buscar ou ler código de barras"
-                placeholder="Nome, SKU ou código de barras + Enter"
+                placeholder="Busque por produto, código ou IMEI"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-              <button className="secondary small">Adicionar código</button>
+              <button className="secondary small">
+                <ScanBarcode size={17} /> Ler código
+              </button>
             </form>
+            <div
+              className="pos-category-tabs"
+              aria-label="Categorias dos produtos"
+            >
+              <button
+                className={!category ? "active" : ""}
+                onClick={() => setCategory("")}
+              >
+                Todos
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  className={category === c.id ? "active" : ""}
+                  onClick={() => setCategory(c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
             <div className="pos-product-list">
               {items.length ? (
                 items.map((p) => (
@@ -831,17 +849,24 @@ export default function PosPanel({
                     disabled={p.quantity <= 0 || !can("pos_sell")}
                     onClick={() => void add(p)}
                   >
-                    <div className="product-avatar">
-                      {p.serialized ? (
-                        <ScanBarcode size={22} />
-                      ) : (
-                        <ShoppingCart size={22} />
-                      )}
-                    </div>
+                    <ProductImage product={p} />
                     <span>
                       <strong>{p.name}</strong>
                       <small>
-                        {p.sku} · {p.quantity} un. disponíveis
+                        {[
+                          {
+                            new: "Novo",
+                            refurbished: "Seminovo",
+                            used: "Usado",
+                          }[p.condition as string],
+                          p.capacity,
+                          p.color,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || p.sku}
+                        <span className="pos-availability">
+                          {p.quantity} disponíveis
+                        </span>
                         {p.serialized ? " · Selecionar aparelho" : ""}
                       </small>
                     </span>
@@ -867,7 +892,7 @@ export default function PosPanel({
           <section className="panel pos-cart">
             <div className="panel-heading">
               <div>
-                <h2>Carrinho da venda</h2>
+                <h2>Venda atual</h2>
                 <p>
                   {cart.reduce((n, l) => n + l.quantity, 0)} unidades
                   selecionadas
@@ -884,6 +909,52 @@ export default function PosPanel({
                 </button>
               )}
             </div>
+            {can("customer_lookup") && (
+              <div className="pos-customer-picker">
+                <label htmlFor="pos-cart-customer">Cliente</label>
+                {saleCustomer ? (
+                  <div className="pos-selected-customer">
+                    <strong>{saleCustomer.name}</strong>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => {
+                        setSaleCustomer(null);
+                        setCustomerQuery("");
+                      }}
+                    >
+                      Trocar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      id="pos-cart-customer"
+                      placeholder="Selecionar cliente · nome ou documento"
+                      value={customerQuery}
+                      onChange={(e) => setCustomerQuery(e.target.value)}
+                    />
+                    {customerMatches.length > 0 && (
+                      <div className="pos-customer-results">
+                        {customerMatches.map((c) => (
+                          <button
+                            type="button"
+                            key={c.id}
+                            onClick={() => {
+                              setSaleCustomer(c);
+                              setCustomerQuery("");
+                            }}
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <small>Opcional para vendas à vista</small>
+                  </>
+                )}
+              </div>
+            )}
             <div className="pos-cart-lines">
               {cart.length ? (
                 cart.map((l, index) => (
@@ -891,9 +962,12 @@ export default function PosPanel({
                     className="pos-cart-line"
                     key={`${l.product_id}-${l.unit_id || ""}`}
                   >
+                    <ProductImage product={l} className="compact" />
                     <div>
                       <strong>{l.name}</strong>
-                      <small>{l.identifiers || l.sku}</small>
+                      <small className={l.unit_id ? "pos-unit-identifier" : ""}>
+                        {l.identifiers || l.sku}
+                      </small>
                       <span>{formatCents(l.price)} / un.</span>
                     </div>
                     <button
@@ -998,14 +1072,88 @@ export default function PosPanel({
                 <span>Total da venda</span>
                 <strong>{formatCents(total)}</strong>
               </div>
+              <div
+                className="pos-payment-shortcuts"
+                aria-label="Escolher pagamento"
+              >
+                <button
+                  className="secondary"
+                  disabled={!cart.length || !maySell || total <= 0}
+                  onClick={() => beginCheckout("pix")}
+                >
+                  Pix
+                </button>
+                <button
+                  className="secondary"
+                  disabled={!cart.length || !maySell || total <= 0}
+                  onClick={() => beginCheckout("credit")}
+                >
+                  Cartão
+                </button>
+                <button
+                  className="secondary"
+                  disabled={!cart.length || !maySell || total <= 0}
+                  onClick={() => beginCheckout("cash")}
+                >
+                  Dinheiro
+                </button>
+              </div>
               <button
                 className="primary full"
                 disabled={!cart.length || !maySell || total <= 0}
-                onClick={beginCheckout}
+                onClick={() => beginCheckout()}
               >
                 Receber e finalizar
                 <ArrowUpRight size={17} />
               </button>
+              <button
+                className="secondary full"
+                disabled={!cart.length || total <= 0 || !can("pos_sell")}
+                onClick={() => {
+                  try {
+                    if (
+                      !Number.isFinite(amountOf(discount)) ||
+                      discountValue < 0 ||
+                      discountValue > subtotal ||
+                      (!can("pos_discount") && discountValue)
+                    )
+                      throw Error("Confira o desconto.");
+                    const content = [
+                      "ORÇAMENTO · NÃO FISCAL",
+                      new Date().toLocaleString("pt-BR"),
+                      saleCustomer
+                        ? `Cliente: ${saleCustomer.name}`
+                        : "Cliente não informado",
+                      ...cart.map(
+                        (l) =>
+                          `${l.quantity}x ${l.name} · ${l.identifiers || l.sku} · ${formatCents(l.price * l.quantity)}`,
+                      ),
+                      `Subtotal: ${formatCents(subtotal)}`,
+                      `Desconto: ${formatCents(discountValue)}`,
+                      `Total: ${formatCents(total)}`,
+                      "Proposta sem reserva de estoque, sem cobrança e sujeita à confirmação de preço e disponibilidade.",
+                    ].join("\n");
+                    const url = URL.createObjectURL(
+                      new Blob([content], { type: "text/plain;charset=utf-8" }),
+                    );
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `orcamento-${new Date().toISOString().slice(0, 10)}.txt`;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    onNotice(
+                      "Orçamento baixado. Não foi registrada uma venda nem reservada mercadoria.",
+                    );
+                  } catch (e: any) {
+                    onNotice(e.message, true);
+                  }
+                }}
+              >
+                Salvar orçamento
+              </button>
+              <small className="pos-quote-note">
+                Baixa um arquivo. Não reserva estoque nem registra uma venda.
+              </small>
               {session && !session.own && (
                 <small>
                   Vendas exigem uma sessão aberta em seu próprio nome.
@@ -1451,7 +1599,11 @@ export default function PosPanel({
             </p>
           </div>
           <div className="modal-footer pos-receipt-actions no-print">
-            <DownloadReceipt receipt={receipt} />
+            <ReceiptActions
+              receipt={receipt}
+              canContact={can("customer_lookup")}
+              onNotice={onNotice}
+            />
             {receipt.credit && (
               <button
                 className="secondary"

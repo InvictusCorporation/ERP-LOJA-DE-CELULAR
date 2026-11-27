@@ -1,3 +1,4 @@
+import { whatsappPhone } from "../shared/pos-receipt";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { Database, Tx } from "./db";
@@ -445,7 +446,7 @@ export class PosService {
             if (!item.unit_id || item.quantity !== 1)
               fail(400, "Selecione cada aparelho individualmente.");
             const [u] = await tx.query(
-              "SELECT * FROM device_units WHERE id=$1 AND product_id=$2 AND branch_id=$3 AND status='in_stock' FOR UPDATE",
+              "SELECT * FROM device_units WHERE id=$1 AND product_id=$2 AND branch_id=$3 AND status='in_stock' AND NOT reserved FOR UPDATE",
               [item.unit_id, p.id, s.branch_id],
             );
             if (!u) fail(409, "Aparelho indisponível nesta filial.");
@@ -671,6 +672,31 @@ export class PosService {
         refunds,
         credit: credit || null,
       };
+    });
+  }
+  async receiptContact(i: Identity, id: string) {
+    permit(i, "customer_lookup");
+    const { sale } = await this.receipt(i, id);
+    if (!sale.customer_id) return { state: "manual" };
+    return this.db.transaction(i.tenant_id, async (tx) => {
+      const [c] = await tx.query(
+        "SELECT name,phone,active,contact_permission FROM customers WHERE id=$1",
+        [sale.customer_id],
+      );
+      if (!c?.active || !c.contact_permission)
+        return {
+          state: "blocked",
+          reason:
+            "O cliente está inativo ou não autorizou contato. Confira a preferência no CRM.",
+        };
+      try {
+        return { state: "ready", name: c.name, phone: whatsappPhone(c.phone) };
+      } catch {
+        return {
+          state: "blocked",
+          reason: "O telefone do cliente precisa ser corrigido no cadastro.",
+        };
+      }
     });
   }
   async refund(i: Identity, saleId: string, body: unknown, key: unknown) {

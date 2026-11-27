@@ -12,7 +12,10 @@ test("Funcionários: permissões, resposta perdida, bloqueio, reativação, hist
     staffEmail = `staff-browser-${stamp}@test.local`,
     password = "Team-Browser-2026!";
   const setup = await page.request.post("/api/setup", {
-    headers: { origin: "http://localhost:3000" },
+    headers: {
+      origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+        .origin,
+    },
     data: {
       company: "Empresa de equipe automatizada",
       name: "Gestor equipe navegador",
@@ -36,7 +39,8 @@ test("Funcionários: permissões, resposta perdida, bloqueio, reativação, hist
     branch = me.branches[0].id;
   const newBranch = await page.request.post("/api/branches", {
     headers: {
-      origin: "http://localhost:3000",
+      origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+        .origin,
       "x-csrf-token": me.csrf,
       "idempotency-key": randomUUID(),
     },
@@ -117,11 +121,16 @@ test("Funcionários: permissões, resposta perdida, bloqueio, reativação, hist
   expect(mapping.attendance).toBeNull();
   expect(mapping.integration_status).toBe("mapping_only");
   expect(mapping.email).toBeUndefined();
-  const staff = await browser.newContext({ baseURL: "http://localhost:3000" });
+  const staff = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
+  });
   try {
     const login = () =>
       staff.request.post("/api/login", {
-        headers: { origin: "http://localhost:3000" },
+        headers: {
+          origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+            .origin,
+        },
         data: { email: staffEmail, password },
       });
     expect((await login()).ok()).toBe(true);
@@ -143,7 +152,8 @@ test("Funcionários: permissões, resposta perdida, bloqueio, reativação, hist
     expect(identity.permissions).not.toContain("credit_sell");
     const denied = await staff.request.post("/api/pos/sales", {
       headers: {
-        origin: "http://localhost:3000",
+        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+          .origin,
         "x-csrf-token": identity.csrf,
         "idempotency-key": randomUUID(),
       },

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { Database } from "./db";
+import { startWhatsAppWorker } from "./whatsapp";
 import { createApp } from "./app";
 async function main() {
   const db = new Database();
@@ -7,10 +8,12 @@ async function main() {
   const app = await createApp(db);
   await app.listen(Number(process.env.PORT || 4000), "127.0.0.1");
   console.log("Invictus API disponível em http://127.0.0.1:4000");
+  const stopNotifications = startWhatsAppWorker(db);
   let stopping = false;
   const stop = async () => {
     if (stopping) return;
     stopping = true;
+    await stopNotifications();
     await app.close();
     await db.close();
     if (process.connected) process.disconnect();

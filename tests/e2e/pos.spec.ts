@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 test("PDV completo: leitor, venda mista, falha de rede, devoluções, comprovante e conferência", async ({
   page,
@@ -37,7 +38,8 @@ test("PDV completo: leitor, venda mista, falha de rede, devoluções, comprovant
     const res = await page.request.post(`/api${path}`, {
       data: body,
       headers: {
-        origin: "http://localhost:3000",
+        origin: new URL(process.env.E2E_BASE_URL || "http://localhost:3000")
+          .origin,
         "x-csrf-token": me.csrf,
         "idempotency-key": randomUUID(),
       },
@@ -155,6 +157,69 @@ test("PDV completo: leitor, venda mista, falha de rede, devoluções, comprovant
     .getByRole("button", { name: "Baixar comprovante", exact: true })
     .click();
   await (await download).saveAs("test-results/comprovante-pdv.txt");
+  await page.evaluate(() => {
+    (window as any).__receiptPrinted = false;
+    window.print = () => {
+      (window as any).__receiptPrinted = true;
+    };
+  });
+  await page.getByRole("button", { name: "Imprimir", exact: true }).click();
+  expect(await page.evaluate(() => (window as any).__receiptPrinted)).toBe(
+    true,
+  );
+  await page
+    .getByRole("button", { name: "Enviar pelo WhatsApp", exact: true })
+    .click();
+  const preview = page.getByRole("region", {
+    name: "Conferir comprovante para WhatsApp",
+  });
+  await expect(preview).toBeVisible();
+  await preview
+    .getByLabel("WhatsApp do cliente", { exact: true })
+    .fill("(85) 99999-0000");
+  await expect(
+    preview.getByRole("button", { name: "Abrir WhatsApp com comprovante" }),
+  ).toBeDisabled();
+  await preview.getByRole("checkbox").check();
+  const link = preview.getByRole("link", {
+    name: "Abrir WhatsApp com comprovante",
+  });
+  const target = new URL((await link.getAttribute("href"))!);
+  expect(target.origin).toBe("https://wa.me");
+  expect(target.pathname).toBe("/5585999990000");
+  expect(target.searchParams.get("text")).toBe(
+    await readFile("test-results/comprovante-pdv.txt", "utf8"),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/comprovante-whatsapp-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({
+    path: "test-results/comprovante-whatsapp-desktop.png",
+    fullPage: true,
+  });
+  await page.context().route("https://wa.me/**", (route) =>
+    route.fulfill({
+      status: 200,
+      body: "Redirecionamento simulado, sem mensagem enviada.",
+    }),
+  );
+  const popupEvent = page.waitForEvent("popup");
+  await link.click();
+  const popup = await popupEvent;
+  await popup.waitForLoadState();
+  expect(new URL(popup.url()).origin).toBe("https://wa.me");
+  await popup.close();
+  await preview
+    .getByRole("button", { name: "Fechar prévia do WhatsApp" })
+    .click();
   await page.emulateMedia({ media: "print" });
   await expect(page.locator(".pos-receipt")).toHaveCSS("visibility", "visible");
   await expect(page.locator(".sidebar")).toHaveCSS("visibility", "hidden");

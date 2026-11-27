@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 import { HttpException } from "@nestjs/common";
 import { z } from "zod";
@@ -21,6 +22,7 @@ const optionalId = uuid
   .transform((v) => v || null);
 export const productSchema = z
   .object({
+    image_data: z.string().max(110000).optional(),
     name: text(),
     sku: text(80),
     barcode: z
@@ -234,17 +236,19 @@ export class InventoryService {
     q = "",
     archived = false,
     page = 1,
+    category: string | null = null,
   ) {
     branchAccess(i, branch);
+    if (category) validate(uuid, category);
     return this.db.transaction(i.tenant_id, async (tx) => {
       const rows = await tx.query(
         `SELECT p.*,coalesce(s.quantity,0) AS quantity,coalesce(s.minimum,0) AS minimum,
-    c.name AS category_name,b.name AS brand_name,mo.name AS model_name,count(*) OVER()::int AS total
+    (coalesce(s.quantity,0)-(SELECT count(*) FROM device_units du WHERE du.product_id=p.id AND du.branch_id=$1 AND du.reserved))::int AS available_quantity,c.name AS category_name,b.name AS brand_name,mo.name AS model_name,count(*) OVER()::int AS total
     FROM products p LEFT JOIN stock_balances s ON s.product_id=p.id AND s.tenant_id=p.tenant_id AND s.branch_id=$1
     LEFT JOIN catalog_entries c ON c.id=p.category_id LEFT JOIN catalog_entries b ON b.id=p.brand_id LEFT JOIN catalog_entries mo ON mo.id=p.model_id
-    WHERE ($3::boolean OR p.active) AND (p.name ILIKE $2 OR p.sku ILIKE $2 OR p.barcode ILIKE $2)
+    WHERE ($3::boolean OR p.active) AND ($5::uuid IS NULL OR p.category_id=$5) AND (p.name ILIKE $2 OR p.sku ILIKE $2 OR p.barcode ILIKE $2 OR EXISTS(SELECT 1 FROM device_units du LEFT JOIN device_identifiers di ON di.unit_id=du.id WHERE du.product_id=p.id AND du.branch_id=$1 AND (du.serial ILIKE $2 OR di.imei ILIKE $2)))
     ORDER BY p.created_at DESC,p.id LIMIT 30 OFFSET $4`,
-        [branch, `%${q.slice(0, 100)}%`, archived, (page - 1) * 30],
+        [branch, `%${q.slice(0, 100)}%`, archived, (page - 1) * 30, category],
       );
       if (!permissions(i).includes("cost")) rows.forEach((p) => delete p.cost);
       return { items: rows, total: rows[0]?.total || 0, page };
@@ -253,6 +257,33 @@ export class InventoryService {
   async saveProduct(i: Identity, body: unknown, key: unknown, id?: string) {
     permit(i, "catalog");
     const b = validate(productSchema, body);
+    if (b.image_data) {
+      if (
+        !/^\/catalog\/(phone-blue|phone-violet|case|charger|earbuds|screen|cable|holder)\.svg$/.test(
+          b.image_data,
+        )
+      ) {
+        const m =
+          /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(
+            b.image_data,
+          );
+        if (!m) fail(400, "Envie uma imagem PNG, JPEG ou WebP.");
+        try {
+          const image = await sharp(Buffer.from(m[2], "base64"), {
+            limitInputPixels: 16000000,
+          })
+            .rotate()
+            .resize(600, 600, { fit: "inside", withoutEnlargement: true })
+            .webp({ quality: 75 })
+            .toBuffer();
+          if (image.length > 80000)
+            fail(400, "A imagem deve ter até 80 KB após compressão.");
+          b.image_data = "data:image/webp;base64," + image.toString("base64");
+        } catch {
+          fail(400, "Imagem inválida ou muito grande. Escolha outra foto.");
+        }
+      }
+    }
     if (id) validate(uuid, id);
     return this.write(i, key, { action: "product.save", id, b }, async (tx) => {
       for (const [kind, value] of [
@@ -316,6 +347,11 @@ export class InventoryService {
         await tx.query(
           `INSERT INTO products(${fields.join(",")},id,tenant_id) VALUES(${Array.from({ length: 17 }, (_, j) => `$${j + 1}`).join(",")}) RETURNING id`,
           [...values, productId, i.tenant_id],
+        );
+      if (b.image_data !== undefined)
+        await tx.query(
+          "UPDATE products SET image_data=$1 WHERE id=$2 RETURNING id",
+          [b.image_data, productId],
         );
       await audit(
         tx,

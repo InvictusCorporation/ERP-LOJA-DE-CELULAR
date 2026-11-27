@@ -2,6 +2,10 @@
 
 Módulos disponíveis: **1 — Produtos e Estoque**, **2 — Frente de Caixa (PDV)**, **3 — Assistência Técnica**, **4 — CRM e Clientes**, **5 — Gestão Financeira**, **6 — Crediário Próprio**, **7 — Compras e Fornecedores**, **8 — Relatórios Gerenciais**, **9 — Funcionários e Permissões**, **10 — Gestão de Filiais**, **11 — Gestão Fiscal (preparação)** e **12 — Ponto e Frequência (integração preparada)**. O desenvolvimento segue a ordem numérica de 1 a 12, com autorização antes de cada etapa. O módulo 11 possui cadastro/preparação e cofre A1; emissão oficial depende de integração e homologação. O módulo 12 prepara destino, vínculos e pacotes cadastrais; conexão e frequência dependem do projeto de ponto existente. O ambiente começa vazio e não contém contas ou mercadorias fictícias pré-cadastradas.
 
+## Atualização visual da loja
+
+Painel com vendas/alertas da filial, catálogo visual no PDV e ficha lateral dos aparelhos, com fotos, bateria, localização e reserva manual. Veja os detalhes e limites em [Entrega visual das três telas](docs/ENTREGA-VISUAL-LOJA.md). Para uma apresentação sem dados reais, `pnpm demo:api` e `pnpm demo:web` iniciam uma demonstração temporária em localhost:3020, com banco somente em memória.
+
 ## Executar localmente
 
 Requisitos: Node.js 24 e pnpm 11.
@@ -28,6 +32,10 @@ O banco PostgreSQL embarcado (PGlite) fica em `.data/invictus`. Os registros sob
 6. Confira os indicadores e a auditoria. Recarregue a página para confirmar a persistência.
 
 Em **Gestão de filiais**, o proprietário cadastra e administra suas unidades. Em **Funcionários e permissões**, proprietário e administrador gerem a equipe. Os perfis padrão são proprietário, administrador, gerente, vendedor, operador de caixa, técnico, financeiro, estoquista e consulta. O caixa vende e movimenta seu caixa sem descontos/devoluções por padrão; técnicos trabalham em ordens atribuídas, sem custos comerciais por padrão. Exceções individuais são conferidas pelo servidor e suas dependências. Estoquistas também podem transferir mercadorias entre duas filiais autorizadas; a configuração individual pode restringir essa ação.
+
+## Comprovantes e WhatsApp
+
+O caixa permite imprimir, baixar e preparar o comprovante para envio manual pelo WhatsApp. O aviso automático de aparelho pronto está preparado com fila transacional e adaptador da API oficial da Meta; continua desativado até conectar a conta da loja e configurar o template aprovado. Veja [configuração, estados e testes](docs/COMPROVANTES-E-WHATSAPP.md).
 
 ## Demonstrar o PDV
 
